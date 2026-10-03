@@ -102,32 +102,84 @@ curl "http://localhost:5000/api/search/news?q=cyber+fraud+scam+India"
 
 ---
 
+### Analysis Engine Core (`server/services/analysis`)
+- **Evidence-Based Warning Indicators:** Fully deterministic analysis engine evaluating recruitment listings without hallucinating facts or presenting arbitrary AI scam percentages.
+- **Input Normalization (`normalizer.js`):** Supports job title, company name, job description, job URL, salary, location, and recruiter contacts across multiple payload styles (camelCase, snake_case), with automatic extraction of email domains, phone numbers, and messaging links.
+- **Modular Rule Engine (`ruleEngine.js`):** Extensible architecture supporting dynamic rule registration and execution.
+- **Implemented Warning Signal Rules:**
+  1. `upfrontPaymentRule.js`: Detects registration fees, application charges, training fees, and equipment/kit security deposits.
+  2. `employmentPaymentRule.js`: Detects demands for money to start work, prepaid tasks, and wallet recharge schemes.
+  3. `sensitiveFinancialRule.js`: Detects requests for net banking passwords, UPI/ATM PINs, OTPs, blank cheques, and AnyDesk/TeamViewer remote access.
+  4. `unrealisticCompensationRule.js`: Flags exaggerated daily payouts (e.g. ₹5,000–₹10,000/day) for low-skill/minimal-hour jobs.
+  5. `contactChannelRule.js`: Identifies recruitment conducted exclusively via anonymous channels (Telegram/WhatsApp) or enterprise recruiters using public webmail (Gmail/Yahoo).
+  6. `domainMismatchRule.js`: Detects discrepancy between stated corporate employer and recruiter domain, plus suspicious lookalike TLDs.
+  7. `urgencyGuaranteedRule.js`: Identifies "direct joining without interview" and guaranteed selection claims.
+  8. `taskScamRule.js`: Flags YouTube liking, Google map rating, and merchant brushing task schemes.
+  9. `suspiciousUrlRule.js`: Flags link shorteners (bit.ly, etc.) and direct chat links masquerading as application URLs.
+  10. `missingVerificationRule.js`: Identifies missing legal entity identities, generic placeholders ("Reputed MNC"), and missing recruiter contact details.
+- **SerpApi Web Intelligence Integration (`webIntelligenceService.js`):** Gathers authentic Google presence and public scam/fraud reports for the claimed entity without inventing evidence.
+- **API Endpoint:** `POST /api/analyze` returns structured JSON cleanly distinguishing:
+  1. `userProvided`: Information submitted by the user.
+  2. `webEvidence`: Real-world web verification and search findings.
+  3. `warningIndicators`: Array of detected indicators (with type, severity, title, explanation, evidence).
+  4. `missingVerificationSignals`: Authentic missing employer signals.
+- **Automated Tests:** 23 passing unit and integration tests under `server/tests/` runnable via `npm test`.
+
+---
+
+## 4. Useful Commands
+
+### Backend Commands (run inside `/server` or root)
+```bash
+# Navigate to backend
+cd server
+
+# Install dependencies
+npm install
+
+# Run automated test suite (23 tests)
+npm test
+
+# Start backend server
+npm start
+# (or: node server.js)
+```
+
+### Verification & Testing Commands
+```bash
+# Health check
+curl http://localhost:5000/api/health
+
+# Run analysis endpoint test suite
+node test_analyze_endpoint.js
+
+# Post analysis test payload
+curl -X POST http://localhost:5000/api/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"jobTitle":"Data Entry","companyName":"Apex Services","jobDescription":"Pay 1500 registration fee. Earn 5000 daily. Contact via Telegram @apex_desk","skipWebSearch":true}'
+```
+
+---
+
 ## 5. What Remains (Next Steps)
 
-1. **Scam Detection & Analysis Engine (Backend):**
-   - Build `server/services/scamDetectionService.js` to evaluate threat signals:
-     - **Domain / URL Analyzer:** Assess domain age, suspicious TLDs, impersonation patterns.
-     - **Job Scam Analyzer:** Spot fake recruiter indicators, upfront payment demands, unrealistic packages.
-     - **UPI / Payment Threat Detector:** Identify malicious handles, QR patterns, and phishing hooks.
-   - Aggregate scoring mechanism (Safe, Suspicious, Dangerous) with confidence ratings and reasoning.
-
-2. **Database Integration (MongoDB / Mongoose):**
+1. **Database Integration (MongoDB / Mongoose):**
    - Connect to MongoDB to store user scan reports, cached search results, and known threat lists.
 
-3. **Frontend Application (`/client`):**
+2. **Frontend Application (`/client`):**
    - Initialize React frontend (Vite + React recommended).
    - Build modern, responsive UI with:
+     - Job Offer Scam Checker & Risk Indicator Explorer.
      - URL / Domain Inspector.
-     - Job Offer Scam Checker.
-     - Threat intelligence dashboard with visual risk indicators.
+     - Threat intelligence dashboard.
 
-4. **Testing & Hackathon Polish:**
-   - Add unit tests for scam heuristics.
-   - Prepare demo data / scenarios for presentation.
+3. **Hackathon Polish & Demo:**
+   - Prepare demo scenarios showcasing job scam detection, UPI threat analysis, and SerpApi intelligence.
 
 ---
 
 ## 6. Known Considerations & Notes
-- **Node Version:** Node `v16.20.2` is running locally; CommonJS (`require` / `module.exports`) is utilized.
-- **Environment Variable:** Ensure `SERPAPI_KEY` is present in `server/.env` before running search queries.
+- **Node Version:** Node `v24.21.0` is running locally; CommonJS (`require` / `module.exports`) is utilized with native test runner support (`node --test`).
+- **Environment Variable:** Ensure `SERPAPI_KEY` is present in `server/.env` before running live search queries.
 - **Port Usage:** Server defaults to port `5000`. If port conflicts occur, check for background node processes (`netstat -ano | findstr :5000`).
+
