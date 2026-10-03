@@ -174,25 +174,44 @@ curl -X POST http://localhost:5000/api/analyze \
 
 ---
 
+### Frontend Core (`/client`)
+- **Vite + React Framework:** Built with React 19 + Vite 8 in `client/` using a custom Vanilla CSS design system.
+- **Brand & Header:** Clean cybersecurity theme featuring `SCAMSHIELD` brand title, tagline `"Verify before you trust."`, and live engine telemetry indicator (`Engine Online` / `Engine Offline`).
+- **Primary Job Inspection Form (`JobForm.jsx`):**
+  - Inputs for company name, job title, application URL, location, compensation, recruiter contact, and full job description.
+  - 1-Click preset buttons to test instantly: **Fee Scam**, **Spoof Scam**, and **Legit Job**.
+- **Loading State (`LoadingIndicator.jsx`):** Dynamic multi-step progress animation tracking Google Web, Google Jobs, Google News, and deterministic threat analysis.
+- **Results Dashboard:**
+  1. **Overall Analysis Summary (`SummaryCard.jsx`):** Evidence-based assessment badge (`HIGH_RISK`, `ELEVATED_RISK`, `MODERATE_RISK`, `LOW_RISK`), clear headline, indicator counts grid (Critical, High, Medium, Low), and legal disclaimer (zero arbitrary scam percentage).
+  2. **Warning Indicators (`RiskIndicatorsSection.jsx`):** Cards with severity badges (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) and exact matched evidence quotes from the source text.
+  3. **Company Web Presence (`WebEvidenceSection.jsx`):** Google Knowledge Graph profile, verified domain badge, and indexed organic links.
+  4. **Google Jobs Corroboration (`JobEvidenceSection.jsx`):** Syndication status badge, job title, employer, location, and direct application links.
+  5. **Google News Intel (`NewsEvidenceSection.jsx`):** Flagged fraud/scam reports, publisher sources, article dates, snippets, and external links.
+  6. **Verification Signals (`VerificationSignalsSection.jsx`):** 2-column split displaying Verified Signals vs Missing Verification Signals with priority badges.
+  7. **Candidate Precautions (`RecommendationsCard.jsx`):** Actionable guidance for candidate safety.
+- **Zero Direct SerpApi Exposure:** All API communication is strictly routed through the Express backend proxy (`/api -> http://localhost:5000`).
+- **Mobile Responsive:** Accessible layout with custom breakpoints for desktop, tablet, and mobile viewports.
+
+---
+
 ## 5. What Remains (Next Steps)
 
 1. **Database Integration (MongoDB / Mongoose):**
    - Connect to MongoDB to store user scan reports, cached search results, and known threat lists.
 
-2. **Frontend Application (`/client`):**
-   - Initialize React frontend (Vite + React recommended).
-   - Build modern, responsive UI with:
-     - Job Offer Scam Checker & Risk Indicator Explorer.
-     - URL / Domain Inspector.
-     - Threat intelligence dashboard.
+2. **Domain & UPI Inspectors:**
+   - Add specialized tabs for standalone URL/Domain inspection and UPI/payment fraud checks.
 
 3. **Hackathon Polish & Demo:**
-   - Prepare demo scenarios showcasing job scam detection, UPI threat analysis, and SerpApi intelligence.
+   - Prepare final pitch deck and demo recording for presentation.
 
 ---
 
 ## 6. Known Considerations & Notes
-- **Node Version:** Node `v24.21.0` is running locally; CommonJS (`require` / `module.exports`) is utilized with native test runner support (`node --test`).
-- **Environment Variable:** Ensure `SERPAPI_KEY` is present in `server/.env` before running live search queries.
-- **Port Usage:** Server defaults to port `5000`. If port conflicts occur, check for background node processes (`netstat -ano | findstr :5000`).
+- **Node Version:** Node `v24.21.0` is running locally; CommonJS backend with ES module Vite React frontend.
+- **Port Usage:**
+  - Backend: `http://localhost:5000`
+  - Frontend: `http://localhost:5173` (with `/api` proxy to `localhost:5000`)
+- **Environment Variable:** Ensure `SERPAPI_KEY` is present in `server/.env`.
+
 
