@@ -23,7 +23,7 @@ export default function ErrorAlert({ error, onRetry }) {
           type="button"
           className="btn-secondary"
           onClick={onRetry}
-          style={{ borderColor: 'var(--risk-critical-border)', color: '#ffffff' }}
+          style={{ borderColor: 'var(--risk-critical-border)', color: 'var(--risk-critical)', backgroundColor: 'var(--bg-surface)' }}
         >
           <RefreshCw size={14} /> Retry
         </button>

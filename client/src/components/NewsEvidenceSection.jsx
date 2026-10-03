@@ -22,7 +22,7 @@ export default function NewsEvidenceSection({ newsEvidence }) {
   return (
     <div className="evidence-column">
       <div className="section-title-wrap">
-        <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '1.05rem', color: '#ffffff' }}>
+        <h4>
           <Newspaper size={18} color="var(--primary)" /> News & Fraud Intel
         </h4>
         {alertsFound ? (
@@ -59,16 +59,16 @@ export default function NewsEvidenceSection({ newsEvidence }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="evidence-item-title"
-                style={{ color: '#fca5a5', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}
+                style={{ color: 'var(--risk-critical)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', fontWeight: 700 }}
               >
                 <span>{item.title}</span>
                 <ExternalLink size={13} style={{ flexShrink: 0 }} />
               </a>
-              <div className="evidence-item-meta" style={{ color: '#f87171' }}>
+              <div className="evidence-item-meta" style={{ color: 'var(--risk-critical)', opacity: 0.9 }}>
                 <span>{item.source}</span>
                 {item.date && <span>&bull; {item.date}</span>}
               </div>
-              {item.snippet && <p className="evidence-item-snippet" style={{ color: '#fecaca' }}>{item.snippet}</p>}
+              {item.snippet && <p className="evidence-item-snippet" style={{ color: 'var(--text-main)' }}>{item.snippet}</p>}
             </div>
           ))}
         </div>

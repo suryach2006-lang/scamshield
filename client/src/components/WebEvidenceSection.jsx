@@ -22,7 +22,7 @@ export default function WebEvidenceSection({ webEvidence }) {
   return (
     <div className="evidence-column">
       <div className="section-title-wrap">
-        <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '1.05rem', color: '#ffffff' }}>
+        <h4>
           <Globe size={18} color="var(--primary)" /> Company Web Presence
         </h4>
         {officialDomain ? (

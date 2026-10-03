@@ -6,7 +6,7 @@ export default function RecommendationsCard({ recommendations }) {
 
   return (
     <div className="recommendations-card">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ffffff', fontSize: '1.05rem', fontWeight: 700 }}>
+      <div className="recommendations-title">
         <ShieldCheck size={20} color="var(--primary)" />
         Recommended Candidate Actions
       </div>

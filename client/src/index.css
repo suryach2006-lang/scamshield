@@ -1,79 +1,158 @@
 /**
- * ScamShield Design System & Global Styles
- * High-precision, modern cybersecurity & fraud intelligence theme.
+ * ScamShield Design System & Global Tokens
+ * Cohesive, accessible, dual-theme architecture (Dark / Light Mode)
  */
 
-:root {
+/* ==========================================================================
+   Design Tokens - Dark Mode (Default)
+   ========================================================================== */
+:root,
+[data-theme="dark"] {
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  /* Color Palette */
-  --bg-app: #080c14;
-  --bg-surface: #0e1626;
-  --bg-surface-elevated: #152238;
-  --bg-surface-glass: rgba(14, 22, 38, 0.85);
+  /* Surfaces & Backgrounds */
+  --bg-app: #090e1a;
+  --bg-surface: #101828;
+  --bg-surface-elevated: #162034;
+  --bg-surface-glass: rgba(16, 24, 40, 0.82);
+  --bg-input: #0b1220;
+  --bg-input-focus: #0f182c;
+  --bg-evidence: #070c16;
 
-  --border-subtle: rgba(148, 163, 184, 0.12);
-  --border-medium: rgba(148, 163, 184, 0.22);
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-default: rgba(255, 255, 255, 0.12);
+  --border-hover: rgba(255, 255, 255, 0.22);
   --border-focus: #06b6d4;
 
-  --text-primary: #f8fafc;
+  /* Typography */
+  --text-main: #f8fafc;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
-  --text-inverse: #020617;
+  --text-inverse: #090e1a;
 
-  /* Accents */
+  /* Brand & Accents */
   --primary: #06b6d4;
   --primary-hover: #0891b2;
+  --primary-subtle: rgba(6, 182, 212, 0.14);
   --primary-glow: rgba(6, 182, 212, 0.25);
 
-  /* Risk Severities */
+  /* Status & Risk Indicators */
   --risk-critical: #ef4444;
   --risk-critical-bg: rgba(239, 68, 68, 0.12);
-  --risk-critical-border: rgba(239, 68, 68, 0.35);
+  --risk-critical-border: rgba(239, 68, 68, 0.3);
 
   --risk-high: #f97316;
   --risk-high-bg: rgba(249, 115, 22, 0.12);
-  --risk-high-border: rgba(249, 115, 22, 0.35);
+  --risk-high-border: rgba(249, 115, 22, 0.3);
 
   --risk-medium: #f59e0b;
   --risk-medium-bg: rgba(245, 158, 11, 0.12);
-  --risk-medium-border: rgba(245, 158, 11, 0.35);
+  --risk-medium-border: rgba(245, 158, 11, 0.3);
 
   --risk-low: #10b981;
   --risk-low-bg: rgba(16, 185, 129, 0.12);
-  --risk-low-border: rgba(16, 185, 129, 0.35);
+  --risk-low-border: rgba(16, 185, 129, 0.3);
 
   --info-cyan: #38bdf8;
   --info-cyan-bg: rgba(56, 189, 248, 0.12);
   --info-cyan-border: rgba(56, 189, 248, 0.3);
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.55);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 28px -4px rgba(0, 0, 0, 0.55);
 
   /* Radii */
+  --radius-xs: 4px;
   --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 18px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
 }
 
+/* ==========================================================================
+   Design Tokens - Light Mode
+   ========================================================================== */
+[data-theme="light"] {
+  /* Surfaces & Backgrounds */
+  --bg-app: #f4f6fb;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #f8fafc;
+  --bg-surface-glass: rgba(255, 255, 255, 0.9);
+  --bg-input: #ffffff;
+  --bg-input-focus: #ffffff;
+  --bg-evidence: #f1f5f9;
+
+  /* Borders */
+  --border-subtle: rgba(15, 23, 42, 0.08);
+  --border-default: rgba(15, 23, 42, 0.14);
+  --border-hover: rgba(15, 23, 42, 0.28);
+  --border-focus: #0284c7;
+
+  /* Typography */
+  --text-main: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-inverse: #ffffff;
+
+  /* Brand & Accents */
+  --primary: #0284c7;
+  --primary-hover: #0369a1;
+  --primary-subtle: rgba(2, 132, 199, 0.1);
+  --primary-glow: rgba(2, 132, 199, 0.2);
+
+  /* Status & Risk Indicators (Adjusted for light background contrast) */
+  --risk-critical: #dc2626;
+  --risk-critical-bg: #fee2e2;
+  --risk-critical-border: #fca5a5;
+
+  --risk-high: #ea580c;
+  --risk-high-bg: #ffedd5;
+  --risk-high-border: #fdba74;
+
+  --risk-medium: #d97706;
+  --risk-medium-bg: #fef3c7;
+  --risk-medium-border: #fcd34d;
+
+  --risk-low: #059669;
+  --risk-low-bg: #d1fae5;
+  --risk-low-border: #6ee7b7;
+
+  --info-cyan: #0284c7;
+  --info-cyan-bg: #e0f2fe;
+  --info-cyan-border: #7dd3fc;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 28px -4px rgba(15, 23, 42, 0.12);
+}
+
+/* ==========================================================================
+   CSS Reset & Base Setup
+   ========================================================================== */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+html {
+  color-scheme: light dark;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--bg-app);
-  color: var(--text-primary);
+  color: var(--text-main);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 a {
@@ -83,7 +162,6 @@ a {
 }
 
 a:hover {
-  color: #38bdf8;
   text-decoration: underline;
 }
 
@@ -96,18 +174,19 @@ button {
 
 input, textarea, select {
   font-family: inherit;
-  font-size: 0.95rem;
-  color: var(--text-primary);
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-medium);
+  font-size: 0.93rem;
+  color: var(--text-main);
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  padding: 0.65rem 0.9rem;
+  padding: 0.65rem 0.85rem;
   width: 100%;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.2s ease;
 }
 
 input:focus, textarea:focus {
   outline: none;
+  background-color: var(--bg-input-focus);
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px var(--primary-glow);
 }
@@ -116,32 +195,47 @@ input::placeholder, textarea::placeholder {
   color: var(--text-muted);
 }
 
-/* Base Card Style */
+/* Focus Visibility for Accessibility */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Reusable Card System
+   ========================================================================== */
 .shield-card {
   background-color: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
   box-shadow: var(--shadow-sm);
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
 .shield-card:hover {
-  border-color: var(--border-medium);
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
 }
 
-/* Badges */
+/* ==========================================================================
+   Badges
+   ========================================================================== */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: 0.25rem 0.65rem;
-  border-radius: 9999px;
-  line-height: 1;
+  padding: 0.22rem 0.6rem;
+  border-radius: var(--radius-pill);
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .badge-critical {
@@ -174,24 +268,27 @@ input::placeholder, textarea::placeholder {
   border: 1px solid var(--info-cyan-border);
 }
 
-/* Primary Button */
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
 .btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background: linear-gradient(135deg, #06b6d4 0%, #0284c7 100%);
+  background-color: var(--primary);
   color: #ffffff;
   font-weight: 600;
-  font-size: 1rem;
-  padding: 0.8rem 1.6rem;
+  font-size: 0.95rem;
+  padding: 0.75rem 1.5rem;
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.3);
-  transition: transform 0.1s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  box-shadow: 0 2px 8px var(--primary-glow);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
 }
 
 .btn-primary:hover:not(:disabled) {
-  box-shadow: 0 6px 20px rgba(6, 182, 212, 0.45);
+  background-color: var(--primary-hover);
+  box-shadow: 0 4px 14px var(--primary-glow);
   transform: translateY(-1px);
 }
 
@@ -200,40 +297,73 @@ input::placeholder, textarea::placeholder {
 }
 
 .btn-primary:disabled {
-  opacity: 0.65;
+  opacity: 0.6;
   cursor: not-allowed;
   box-shadow: none;
 }
 
-/* Secondary Button */
 .btn-secondary {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
   background-color: var(--bg-surface-elevated);
   color: var(--text-secondary);
-  border: 1px solid var(--border-medium);
-  padding: 0.45rem 0.85rem;
-  font-size: 0.85rem;
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: var(--radius-md);
   transition: all 0.15s ease;
 }
 
-.btn-secondary:hover {
-  background-color: rgba(255, 255, 255, 0.06);
-  color: var(--text-primary);
-  border-color: var(--border-focus);
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--primary-subtle);
+  color: var(--text-main);
+  border-color: var(--primary);
 }
 
-/* Code Snippet Box */
+.btn-secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Theme Toggle Button
+   ========================================================================== */
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  background-color: var(--bg-surface-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.theme-toggle-btn:hover {
+  color: var(--text-main);
+  border-color: var(--border-hover);
+  background-color: var(--bg-surface);
+}
+
+/* ==========================================================================
+   Evidence Snippet Box
+   ========================================================================== */
 .evidence-quote {
   font-family: var(--font-mono);
-  font-size: 0.85rem;
-  background-color: rgba(0, 0, 0, 0.45);
+  font-size: 0.82rem;
+  background-color: var(--bg-evidence);
+  border: 1px solid var(--border-subtle);
   border-left: 3px solid var(--primary);
-  padding: 0.65rem 0.9rem;
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  color: #e2e8f0;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
   overflow-x: auto;
   word-break: break-word;
+  line-height: 1.5;
 }

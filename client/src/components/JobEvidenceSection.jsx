@@ -23,7 +23,7 @@ export default function JobEvidenceSection({ jobEvidence }) {
   return (
     <div className="evidence-column">
       <div className="section-title-wrap">
-        <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '1.05rem', color: '#ffffff' }}>
+        <h4>
           <Briefcase size={18} color="var(--primary)" /> Google Jobs Evidence
         </h4>
         {isCorroborated ? (

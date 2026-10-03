@@ -25,7 +25,7 @@ export default function LoadingIndicator() {
     <div className="loading-box" role="status" aria-live="polite">
       <div className="spinner" aria-hidden="true" />
       <div>
-        <h3 style={{ color: '#ffffff', fontSize: '1.1rem', marginBottom: '0.4rem' }}>
+        <h3 style={{ fontSize: '1.1rem', marginBottom: '0.4rem' }}>
           Conducting Deep Threat & Web Intelligence Analysis
         </h3>
         <p style={{ color: 'var(--primary)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
