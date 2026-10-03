@@ -1,5 +1,12 @@
+const path = require('path');
+const dotenv = require('dotenv');
 const { getJson } = require('serpapi');
 const logger = require('../utils/logger');
+
+// Ensure environment variables are loaded if called outside server.js entrypoint
+if (!process.env.SERPAPI_KEY) {
+  dotenv.config({ path: path.resolve(__dirname, '../.env') });
+}
 
 /**
  * Validates and retrieves the SerpApi API key strictly from SERPAPI_KEY.
@@ -24,10 +31,10 @@ const getApiKey = () => {
  *
  * @param {string} engine - SerpApi search engine (e.g., 'google', 'google_jobs', 'google_news')
  * @param {Object} parameters - Search query parameters
- * @param {number} [timeoutMs=30000] - Search timeout in milliseconds
+ * @param {number} [timeoutMs=25000] - Search timeout in milliseconds
  * @returns {Promise<Object>} Raw SerpApi response
  */
-const executeSearch = async (engine, parameters, timeoutMs = 30000) => {
+const executeSearch = async (engine, parameters, timeoutMs = 25000) => {
   const apiKey = getApiKey();
 
   // Safe logging: Never log the API key or raw authorization headers
@@ -51,6 +58,17 @@ const executeSearch = async (engine, parameters, timeoutMs = 30000) => {
     }
 
     if (response.error) {
+      // Gracefully handle "no results found" as valid empty results instead of an error
+      if (/hasn't returned any results|has not returned any results|no results found/i.test(response.error)) {
+        logger.info(`[SerpApi] Zero results returned for ${engine} query: "${parameters.q}"`);
+        return {
+          organic_results: [],
+          jobs_results: [],
+          news_results: [],
+          search_information: { total_results: 0 }
+        };
+      }
+
       const err = new Error(`SerpApi error: ${response.error}`);
       err.statusCode = 502;
       err.code = 'SERPAPI_API_ERROR';
@@ -59,18 +77,19 @@ const executeSearch = async (engine, parameters, timeoutMs = 30000) => {
 
     return response;
   } catch (err) {
-    // If it's already an error with a status code, rethrow
     if (err.statusCode) {
       throw err;
     }
 
-    logger.error(`[SerpApi] Request failed for ${engine}: ${err.message}`);
-    const wrappedError = new Error(err.message || 'Failed to complete search via SerpApi.');
+    const errMsg = (err && err.message) || 'Failed to complete search via SerpApi.';
+    logger.error(`[SerpApi] Request failed for ${engine}: ${errMsg}`);
+    const wrappedError = new Error(errMsg);
     wrappedError.statusCode = 502;
     wrappedError.code = 'SERPAPI_REQUEST_FAILED';
     throw wrappedError;
   }
 };
+
 
 /**
  * Searches Google (Web Search) and returns normalized results.

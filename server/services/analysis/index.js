@@ -1,12 +1,12 @@
 /**
  * ScamShield Analysis Engine - Main Facade
- * Orchestrates normalization, web intelligence gathering, rule engine evaluation,
- * and structured response formatting.
+ * Connects normalization, SerpApi multi-engine intelligence (Web, Google Jobs, Google News),
+ * modular rule evaluation, and structured response formatting.
  */
 
 const { normalizeInput } = require('./normalizer');
 const { defaultEngine, RuleEngine } = require('./ruleEngine');
-const { gatherWebIntelligence } = require('./webIntelligenceService');
+const { gatherSerpApiEvidence } = require('./serpApiIntelligenceService');
 const { SEVERITY, ASSESSMENT, INDICATOR_TYPES, STANDARD_DISCLAIMER } = require('./constants');
 const logger = require('../../utils/logger');
 
@@ -29,43 +29,67 @@ const analyzeJobListing = async (rawInput, options = {}) => {
   const engine = options.engine || defaultEngine;
 
   // 3. Execute deterministic local rules
-  const ruleEvaluation = engine.executeRules(normalized);
+  const localRuleEvaluation = engine.executeRules(normalized);
 
-  // 4. Gather authentic web intelligence via SerpApi (if enabled)
-  let webResult = {
+  // 4. Gather SerpApi intelligence across Web, Google Jobs, and Google News
+  const shouldSearch = options.enableWebSearch !== false;
+
+  let serpApiResult = {
     webEvidence: {
       searchPerformed: false,
       status: 'SKIPPED',
-      companyQuery: null,
-      companyPresence: null,
-      reputationQuery: null,
-      reputationAlerts: []
+      query: null,
+      resultCount: 0,
+      knowledgeGraph: null,
+      officialDomain: null,
+      topResults: []
+    },
+    jobEvidence: {
+      searchPerformed: false,
+      status: 'SKIPPED',
+      query: null,
+      location: null,
+      resultCount: 0,
+      matchedListingsCount: 0,
+      corroborationStatus: 'SEARCH_SKIPPED',
+      listings: []
+    },
+    newsEvidence: {
+      searchPerformed: false,
+      status: 'SKIPPED',
+      query: null,
+      resultCount: 0,
+      alertsFound: false,
+      articles: [],
+      flaggedAlerts: []
     },
     additionalIndicators: [],
-    additionalMissingSignals: []
+    verifiedSignals: [],
+    missingSignals: [],
+    serpApiRequestsMade: 0
   };
 
-  const shouldSearchWeb = options.enableWebSearch !== false;
-
-  if (shouldSearchWeb && normalized.companyName) {
+  if (shouldSearch) {
     try {
-      webResult = await gatherWebIntelligence(normalized, { enabled: true });
+      serpApiResult = await gatherSerpApiEvidence(normalized, { enabled: true });
     } catch (err) {
-      logger.error(`[AnalysisService] Web intelligence gathering failed: ${err.message}`);
-      webResult.webEvidence.status = 'ERROR';
-      webResult.webEvidence.error = err.message;
+      logger.error(`[AnalysisService] SerpApi intelligence gathering failed: ${err.message}`);
     }
   }
 
-  // 5. Aggregate indicators and missing signals
+  // 5. Feed structured evidence into the analysis layer
   const combinedIndicators = [
-    ...ruleEvaluation.indicators,
-    ...webResult.additionalIndicators
+    ...localRuleEvaluation.indicators,
+    ...serpApiResult.additionalIndicators
   ];
 
-  const combinedMissingSignals = [
-    ...ruleEvaluation.missingSignals,
-    ...webResult.additionalMissingSignals
+  const allMissingSignals = [
+    ...localRuleEvaluation.missingSignals,
+    ...serpApiResult.missingSignals
+  ];
+
+  const allVerifiedSignals = [
+    ...serpApiResult.verifiedSignals
   ];
 
   // 6. Compute evidence-based risk assessment (NO arbitrary percentages)
@@ -73,12 +97,23 @@ const analyzeJobListing = async (rawInput, options = {}) => {
 
   const durationMs = Date.now() - startTime;
 
-  // 7. Assemble structured JSON distinguishing the four key elements:
-  //    1. User-provided information
-  //    2. Web evidence
-  //    3. Detected warning indicators
-  //    4. Missing verification signals
-  return {
+  // 7. Structured Verification Signals
+  const verificationSignals = {
+    verifiedSignals: allVerifiedSignals,
+    missingSignals: allMissingSignals,
+    verifiedCount: allVerifiedSignals.length,
+    missingCount: allMissingSignals.length
+  };
+
+  // 8. Assemble structured JSON matching requirements:
+  //    { input, webEvidence, jobEvidence, newsEvidence, riskIndicators, verificationSignals }
+  const finalResult = {
+    input: normalized.userFacingInput,
+    webEvidence: serpApiResult.webEvidence,
+    jobEvidence: serpApiResult.jobEvidence,
+    newsEvidence: serpApiResult.newsEvidence,
+    riskIndicators: combinedIndicators,
+    verificationSignals,
     summary: {
       assessment: assessmentSummary.assessment,
       headline: assessmentSummary.headline,
@@ -86,16 +121,19 @@ const analyzeJobListing = async (rawInput, options = {}) => {
       disclaimer: assessmentSummary.disclaimer,
       recommendations: assessmentSummary.recommendations
     },
-    userProvided: normalized.userFacingInput,
-    webEvidence: webResult.webEvidence,
-    warningIndicators: combinedIndicators,
-    missingVerificationSignals: combinedMissingSignals,
     metadata: {
       analyzedAt: new Date().toISOString(),
       executionDurationMs: durationMs,
+      serpApiRequestsMade: serpApiResult.serpApiRequestsMade,
       rulesEvaluatedCount: engine.getRegisteredRuleIds().length
-    }
+    },
+    // Aliases to ensure backward-compatibility with existing tests & consumers
+    userProvided: normalized.userFacingInput,
+    warningIndicators: combinedIndicators,
+    missingVerificationSignals: allMissingSignals
   };
+
+  return finalResult;
 };
 
 module.exports = {

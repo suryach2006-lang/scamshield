@@ -70,7 +70,13 @@ const analyzeJob = async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
-      data: analysisResult
+      data: analysisResult,
+      input: analysisResult.input,
+      webEvidence: analysisResult.webEvidence,
+      jobEvidence: analysisResult.jobEvidence,
+      newsEvidence: analysisResult.newsEvidence,
+      riskIndicators: analysisResult.riskIndicators,
+      verificationSignals: analysisResult.verificationSignals
     });
   } catch (error) {
     logger.error(`[AnalyzeController] Error in analyzeJob: ${error.message}`);

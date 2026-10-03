@@ -117,13 +117,26 @@ curl "http://localhost:5000/api/search/news?q=cyber+fraud+scam+India"
   8. `taskScamRule.js`: Flags YouTube liking, Google map rating, and merchant brushing task schemes.
   9. `suspiciousUrlRule.js`: Flags link shorteners (bit.ly, etc.) and direct chat links masquerading as application URLs.
   10. `missingVerificationRule.js`: Identifies missing legal entity identities, generic placeholders ("Reputed MNC"), and missing recruiter contact details.
-- **SerpApi Web Intelligence Integration (`webIntelligenceService.js`):** Gathers authentic Google presence and public scam/fraud reports for the claimed entity without inventing evidence.
-- **API Endpoint:** `POST /api/analyze` returns structured JSON cleanly distinguishing:
-  1. `userProvided`: Information submitted by the user.
-  2. `webEvidence`: Real-world web verification and search findings.
-  3. `warningIndicators`: Array of detected indicators (with type, severity, title, explanation, evidence).
-  4. `missingVerificationSignals`: Authentic missing employer signals.
-- **Automated Tests:** 23 passing unit and integration tests under `server/tests/` runnable via `npm test`.
+  
+- **SerpApi Multi-Engine Intelligence Integration (`serpApiIntelligenceService.js`):**
+  - **Sensible Query Construction:** Rather than dumping the entire raw input into search, builds targeted queries based on company name, job title, and location:
+    - **Google Web:** Corroborates authentic employer identity, corporate presence, and Knowledge Graph (1 query).
+    - **Google Jobs:** Verifies whether active openings are syndicated on verified aggregators or corporate portals (1 query).
+    - **Google News:** Gathers authentic public reporting, cybercrime advisories, or impersonation fraud warnings (1 query).
+  - **Strict Resource Budget:** Guaranteed maximum of **3 SerpApi search requests per analysis**.
+  - **Graceful Zero-Results Handling:** Intercepts SerpApi's "Google hasn't returned any results for this query" as valid empty results (`resultCount = 0`) rather than failing.
+  - **Zero Fabrication Guarantee:** Quotes only real article titles, publishers, links, and snippets without hallucinating warnings.
+  - **Absence Caveat:** Explicitly does not claim search absence proves a scam; categorizes absence under objective missing verification signals.
+- **Unified API Response Schema:** `POST /api/analyze` returns structured JSON containing:
+  - `input`: Normalized user-provided parameters.
+  - `webEvidence`: Google Web Knowledge Graph and indexed corporate portals.
+  - `jobEvidence`: Google Jobs active listings and corroboration status.
+  - `newsEvidence`: Google News articles and flagged recruitment fraud alerts.
+  - `riskIndicators`: Array of detected indicators (with type, severity, title, explanation, evidence).
+  - `verificationSignals`: Object separating `verifiedSignals` from `missingSignals`.
+  - `summary`: Transparent assessment level, indicator counts, disclaimer, and recommended actions.
+  - `metadata`: Execution duration and exact `serpApiRequestsMade` count.
+- **Automated Tests:** 27 passing unit and integration tests under `server/tests/` runnable via `npm test`.
 
 ---
 
@@ -137,7 +150,7 @@ cd server
 # Install dependencies
 npm install
 
-# Run automated test suite (23 tests)
+# Run automated test suite (27 tests)
 npm test
 
 # Start backend server
@@ -150,13 +163,13 @@ npm start
 # Health check
 curl http://localhost:5000/api/health
 
-# Run analysis endpoint test suite
-node test_analyze_endpoint.js
+# Run live SerpApi multi-engine integration tests (3 distinct examples)
+node test_serpapi_integration.js
 
 # Post analysis test payload
 curl -X POST http://localhost:5000/api/analyze \
   -H "Content-Type: application/json" \
-  -d '{"jobTitle":"Data Entry","companyName":"Apex Services","jobDescription":"Pay 1500 registration fee. Earn 5000 daily. Contact via Telegram @apex_desk","skipWebSearch":true}'
+  -d '{"jobTitle":"Cloud Architect","companyName":"Tata Consultancy Services","location":"Bangalore"}'
 ```
 
 ---
