@@ -1,15 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import JobForm from './components/JobForm';
-import LoadingIndicator from './components/LoadingIndicator';
+import AnalyzingScreen from './components/AnalyzingScreen';
+import ResultsView from './components/ResultsView';
 import ErrorAlert from './components/ErrorAlert';
-import SummaryCard from './components/SummaryCard';
-import RiskIndicatorsSection from './components/RiskIndicatorsSection';
-import WebEvidenceSection from './components/WebEvidenceSection';
-import JobEvidenceSection from './components/JobEvidenceSection';
-import NewsEvidenceSection from './components/NewsEvidenceSection';
-import VerificationSignalsSection from './components/VerificationSignalsSection';
-import RecommendationsCard from './components/RecommendationsCard';
 import { analyzeJob } from './api/scamShieldApi';
 import './App.css';
 
@@ -24,17 +18,33 @@ export default function App() {
     recruiterContact: ''
   });
 
-  const [isLoading, setIsLoading] = useState(false);
+  // Flow State: 'form' | 'analyzing' | 'results'
+  const [currentView, setCurrentView] = useState('form');
   const [error, setError] = useState(null);
   const [results, setResults] = useState(null);
 
-  const resultsRef = useRef(null);
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = (e) => {
+      if (e.state?.view === 'results' && results) {
+        setCurrentView('results');
+      } else {
+        setCurrentView('form');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [results]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
 
     // Check if at least one meaningful field is filled
-    const hasInput = Object.values(formData).some((v) => typeof v === 'string' && v.trim().length > 0);
+    const hasInput = Object.values(formData).some(
+      (v) => typeof v === 'string' && v.trim().length > 0
+    );
+
     if (!hasInput) {
       setError({
         message: 'Please provide at least a company name, job title, or job description to analyze.'
@@ -42,97 +52,79 @@ export default function App() {
       return;
     }
 
-    setIsLoading(true);
+    // 1. Transition into the dedicated ANALYZING state
+    setCurrentView('analyzing');
     setError(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     try {
       const data = await analyzeJob(formData);
       setResults(data);
 
-      // Smooth scroll to results
-      setTimeout(() => {
-        resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+      // 2. Transition into the dedicated RESULTS VIEW
+      setCurrentView('results');
+      window.history.pushState({ view: 'results' }, '', '#results');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       setError(err);
-    } finally {
-      setIsLoading(false);
+      // Return to form so user can inspect error and retry
+      setCurrentView('form');
     }
+  };
+
+  const handleNewAnalysis = () => {
+    setCurrentView('form');
+    if (window.location.hash === '#results') {
+      window.history.pushState({ view: 'form' }, '', window.location.pathname);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelAnalysis = () => {
+    setCurrentView('form');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
     <div className="app-container">
       <Header />
 
-      <section className="hero-banner">
-        <h1>Verify Before You Trust</h1>
-        <p>
-          ScamShield inspects recruitment offers, verifies corporate identity via SerpApi search intelligence,
-          and surfaces evidence-based warning indicators.
-        </p>
-      </section>
-
-      <JobForm
-        formData={formData}
-        setFormData={setFormData}
-        onSubmit={handleSubmit}
-        isLoading={isLoading}
-      />
-
-      {isLoading && <LoadingIndicator />}
-
-      <ErrorAlert error={error} onRetry={handleSubmit} />
-
-      {/* Results Dashboard */}
-      {results && (
-        <main ref={resultsRef} className="results-dashboard" id="results">
-          {/* 1. Overall Analysis Summary */}
-          <SummaryCard
-            summary={results.summary}
-            input={results.input || results.userProvided}
-            metadata={results.metadata}
-          />
-
-          {/* 2 & 3. Warning Indicators & Supporting Evidence */}
-          <RiskIndicatorsSection
-            indicators={results.riskIndicators || results.warningIndicators || []}
-          />
-
-          {/* 4, 5, 6, 7. SerpApi Multi-Engine Evidence & Source Links */}
-          <section className="dashboard-section">
-            <div className="section-title-wrap">
-              <h3>SerpApi Search Intelligence Evidence</h3>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Corroborated across Google Web, Google Jobs & Google News
-              </span>
-            </div>
-
-            <div className="multi-evidence-grid">
-              {/* 4. Company Web Verification */}
-              <WebEvidenceSection webEvidence={results.webEvidence} />
-
-              {/* 5. Google Jobs Search Evidence */}
-              <JobEvidenceSection jobEvidence={results.jobEvidence} />
-
-              {/* 6. Google News Search Evidence */}
-              <NewsEvidenceSection newsEvidence={results.newsEvidence} />
-            </div>
+      {/* STATE 1: JOB INSPECTION FORM */}
+      {currentView === 'form' && (
+        <>
+          <section className="hero-banner">
+            <h1>Verify Before You Trust</h1>
+            <p>
+              ScamShield inspects recruitment offers, verifies corporate identity via SerpApi search intelligence,
+              and surfaces evidence-based warning indicators.
+            </p>
           </section>
 
-          {/* 8. Verified & Missing Verification Information */}
-          <VerificationSignalsSection
-            verificationSignals={
-              results.verificationSignals || {
-                missingSignals: results.missingVerificationSignals || []
-              }
-            }
-          />
+          <ErrorAlert error={error} onRetry={handleSubmit} />
 
-          {/* Recommendations Card */}
-          {results.summary?.recommendations && (
-            <RecommendationsCard recommendations={results.summary.recommendations} />
-          )}
-        </main>
+          <JobForm
+            formData={formData}
+            setFormData={setFormData}
+            onSubmit={handleSubmit}
+            isLoading={false}
+          />
+        </>
+      )}
+
+      {/* STATE 2: DEDICATED ANALYZING SCREEN */}
+      {currentView === 'analyzing' && (
+        <AnalyzingScreen
+          formData={formData}
+          onCancel={handleCancelAnalysis}
+        />
+      )}
+
+      {/* STATE 3: DEDICATED RESULTS VIEW */}
+      {currentView === 'results' && results && (
+        <ResultsView
+          results={results}
+          onNewAnalysis={handleNewAnalysis}
+        />
       )}
     </div>
   );
