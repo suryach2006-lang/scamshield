@@ -1,32 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { Globe, Briefcase, Newspaper, ShieldAlert, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
+import { Globe, Briefcase, Newspaper, Layers, ShieldAlert, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
 
 const ANALYSIS_STAGES = [
   {
     id: 'web',
-    title: 'Company Web Presence',
-    description: 'Verifying official website, domain authenticity & Google Knowledge Graph',
+    title: 'Checking company web presence',
+    description: 'Verifying official domain, company website & Google Knowledge Graph',
     icon: Globe,
-    targetPercent: 28
+    targetPercent: 20
   },
   {
     id: 'jobs',
-    title: 'Google Jobs Search',
+    title: 'Searching Google Jobs',
     description: 'Corroborating active syndicated listings & employer post history',
     icon: Briefcase,
-    targetPercent: 56
+    targetPercent: 40
   },
   {
     id: 'news',
-    title: 'News & Fraud Intelligence',
-    description: 'Scanning public news reports, police FIRs & recruitment scam warnings',
+    title: 'Searching Google News',
+    description: 'Scanning public news reports, police FIRs & fraud warnings',
     icon: Newspaper,
-    targetPercent: 82
+    targetPercent: 62
+  },
+  {
+    id: 'evidence',
+    title: 'Collecting evidence',
+    description: 'Aggregating source records, dates, publisher citations & job metadata',
+    icon: Layers,
+    targetPercent: 80
   },
   {
     id: 'rules',
-    title: 'Evidence Synthesis & Risk Rules',
-    description: 'Cross-referencing signals against deterministic recruitment warning rules',
+    title: 'Identifying warning indicators',
+    description: 'Evaluating deterministic recruitment warning rules & threat signals',
     icon: ShieldAlert,
     targetPercent: 95
   }
@@ -41,27 +48,31 @@ export default function AnalyzingScreen({ formData, onCancel }) {
     const stageTimers = [
       setTimeout(() => {
         setActiveStageIndex(1);
-        setProgressPercent(42);
-      }, 1800),
+        setProgressPercent(35);
+      }, 1500),
       setTimeout(() => {
         setActiveStageIndex(2);
-        setProgressPercent(70);
-      }, 3800),
+        setProgressPercent(55);
+      }, 3200),
       setTimeout(() => {
         setActiveStageIndex(3);
+        setProgressPercent(75);
+      }, 5200),
+      setTimeout(() => {
+        setActiveStageIndex(4);
         setProgressPercent(90);
-      }, 6200)
+      }, 7200)
     ];
 
     // Smooth incremental progress ticker between stages
     const ticker = setInterval(() => {
       setProgressPercent((prev) => {
-        if (prev < 92) {
+        if (prev < 94) {
           return prev + 1;
         }
         return prev;
       });
-    }, 450);
+    }, 380);
 
     return () => {
       stageTimers.forEach(clearTimeout);
