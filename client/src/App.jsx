@@ -3,8 +3,9 @@ import Header from './components/Header';
 import JobForm from './components/JobForm';
 import AnalyzingScreen from './components/AnalyzingScreen';
 import ResultsView from './components/ResultsView';
+import RecentScans from './components/RecentScans';
 import ErrorAlert from './components/ErrorAlert';
-import { analyzeJob } from './api/scamShieldApi';
+import { analyzeJob, saveScan } from './api/scamShieldApi';
 import './App.css';
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState('form');
   const [error, setError] = useState(null);
   const [results, setResults] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Handle browser back/forward buttons
   useEffect(() => {
@@ -58,10 +60,26 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     try {
+      // 2. Perform live threat intelligence analysis
       const data = await analyzeJob(formData);
+
+      // 3. Persist analysis to MongoDB (Analyze -> Save -> Retrieve -> Display flow)
+      try {
+        const saved = await saveScan({
+          input: formData,
+          results: data
+        });
+        if (saved && saved._id) {
+          data.metadata = { ...(data.metadata || {}), scanId: saved._id };
+        }
+        setRefreshTrigger((prev) => prev + 1);
+      } catch (saveErr) {
+        console.warn('[ScamShield] Scan auto-save note:', saveErr.message);
+      }
+
       setResults(data);
 
-      // 2. Transition into the dedicated RESULTS VIEW
+      // 4. Transition into the dedicated RESULTS VIEW
       setCurrentView('results');
       window.history.pushState({ view: 'results' }, '', '#results');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -70,6 +88,28 @@ export default function App() {
       // Return to form so user can inspect error and retry
       setCurrentView('form');
     }
+  };
+
+  const handleOpenPreviousScan = (scanDoc) => {
+    const rawResults = scanDoc.results || {};
+    const fullResults = {
+      ...rawResults,
+      input: scanDoc.input || rawResults.input || {},
+      metadata: {
+        ...(rawResults.metadata || {}),
+        scanId: scanDoc._id,
+        analyzedAt: scanDoc.createdAt || rawResults.metadata?.analyzedAt
+      }
+    };
+
+    if (scanDoc.input) {
+      setFormData(scanDoc.input);
+    }
+
+    setResults(fullResults);
+    setCurrentView('results');
+    window.history.pushState({ view: 'results' }, '', '#results');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleNewAnalysis = () => {
@@ -89,7 +129,7 @@ export default function App() {
     <div className="app-container">
       <Header />
 
-      {/* STATE 1: JOB INSPECTION FORM */}
+      {/* STATE 1: JOB INSPECTION FORM & RECENT SCANS */}
       {currentView === 'form' && (
         <>
           <section className="hero-banner">
@@ -107,6 +147,11 @@ export default function App() {
             setFormData={setFormData}
             onSubmit={handleSubmit}
             isLoading={false}
+          />
+
+          <RecentScans
+            onOpenScan={handleOpenPreviousScan}
+            refreshTrigger={refreshTrigger}
           />
         </>
       )}

@@ -1454,3 +1454,208 @@
     justify-content: center;
   }
 }
+
+/* ==========================================================================
+   Recent Scan History Component Styles
+   ========================================================================== */
+.recent-scans-section {
+  margin: 2rem 0 3.5rem 0;
+  padding: 1.75rem 2rem;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.recent-scans-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.recent-scans-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.recent-scans-icon {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.recent-scans-title-group h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+}
+
+.recent-scans-counter {
+  font-size: 0.75rem;
+  background-color: var(--bg-evidence);
+  color: var(--text-muted);
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-subtle);
+  font-weight: 600;
+}
+
+.btn-refresh-scans {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-default);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-refresh-scans:hover:not(:disabled) {
+  color: var(--text-main);
+  border-color: var(--primary);
+  background-color: var(--primary-subtle);
+}
+
+.btn-refresh-scans:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.recent-scans-loading,
+.recent-scans-empty {
+  text-align: center;
+  padding: 2.25rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.recent-scans-empty p {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.recent-scans-empty span {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  max-width: 480px;
+}
+
+.recent-scans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.1rem;
+}
+
+.recent-scan-card {
+  background-color: var(--bg-evidence);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  user-select: none;
+}
+
+.recent-scan-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.recent-scan-card:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.recent-scan-card.is-opening {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.recent-scan-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.recent-scan-date {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.recent-scan-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.recent-scan-job {
+  font-size: 0.93rem;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-scan-company {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-scan-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: auto;
+}
+
+.btn-open-scan-link {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: gap 0.15s ease;
+}
+
+.recent-scan-card:hover .btn-open-scan-link {
+  gap: 0.45rem;
+}
+

@@ -63,3 +63,76 @@ export const checkHealth = async () => {
     return { online: false };
   }
 };
+
+/**
+ * Saves a completed analysis scan to the MongoDB database.
+ * @param {Object} scanPayload - { input, results }
+ * @returns {Promise<Object>} Saved scan document
+ */
+export const saveScan = async (scanPayload) => {
+  try {
+    const response = await fetch(`${API_BASE}/scans`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(scanPayload)
+    });
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      const error = new Error(data?.error?.message || 'Failed to save scan analysis.');
+      error.code = data?.error?.code || 'SAVE_SCAN_ERROR';
+      throw error;
+    }
+
+    return data.data || data;
+  } catch (err) {
+    console.error('saveScan error:', err);
+    throw err;
+  }
+};
+
+/**
+ * Retrieves a list of recent scan analyses.
+ * @param {number} limit
+ * @returns {Promise<Array>} List of scan summary objects
+ */
+export const getRecentScans = async (limit = 10) => {
+  try {
+    const response = await fetch(`${API_BASE}/scans?limit=${limit}`);
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(data?.error?.message || 'Failed to load recent scans.');
+    }
+
+    return data.data || [];
+  } catch (err) {
+    console.error('getRecentScans error:', err);
+    return [];
+  }
+};
+
+/**
+ * Retrieves a single scan with its complete results by ID.
+ * @param {string} id - Scan ID
+ * @returns {Promise<Object>} Complete scan document
+ */
+export const getScanById = async (id) => {
+  try {
+    const response = await fetch(`${API_BASE}/scans/${encodeURIComponent(id)}`);
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(data?.error?.message || `Failed to retrieve scan ${id}.`);
+    }
+
+    return data.data || data;
+  } catch (err) {
+    console.error('getScanById error:', err);
+    throw err;
+  }
+};
+
