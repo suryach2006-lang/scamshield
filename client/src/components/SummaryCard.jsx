@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, AlertCircle, CheckCircle2, HelpCircle, Shield, Info, Building2, MapPin } from 'lucide-react';
+import { AlertTriangle, AlertCircle, CheckCircle2, HelpCircle, Info, Building2, MapPin } from 'lucide-react';
 
 const ASSESSMENT_CONFIG = {
   HIGH_RISK: {

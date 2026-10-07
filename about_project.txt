@@ -1,0 +1,355 @@
+================================================================================
+SCAMSHIELD - PROJECT ARCHITECTURE & IMPLEMENTATION REPORT
+================================================================================
+
+1. PROJECT PURPOSE
+--------------------------------------------------------------------------------
+- What ScamShield does:
+  ScamShield is an evidence-based recruitment and job offer fraud intelligence
+  platform. It takes job listing attributes (company name, job title, job URL,
+  salary, location, recruiter contacts, and full job description), gathers live
+  multi-engine search evidence via SerpApi (Google Web, Google Jobs, Google News),
+  evaluates the listing against 10 deterministic heuristic warning rules, and
+  presents an objective risk assessment. It strictly avoids generating synthetic
+  AI percentages or hallucinated claims.
+
+- Main user flow:
+  1. User fills the inspection form (or clicks a 1-click preset demo).
+  2. User clicks "Analyze Job".
+  3. The app transitions to a dedicated "Analyzing" screen showing an active
+     5-stage progress indicator.
+  4. Backend executes targeted SerpApi searches, normalizes evidence, and runs
+     deterministic threat rules.
+  5. The app transitions to a dedicated "Results" view presenting an executive
+     summary, detected warning indicators, compact evidence categories, employer
+     verification signals, and candidate precautions.
+  6. The completed analysis is automatically saved to MongoDB.
+  7. When the user returns to the form via "[New Analysis]", the scan appears in
+     "Recent Scan History" and can be reopened instantly without re-querying SerpApi.
+
+
+2. ROOT STRUCTURE
+--------------------------------------------------------------------------------
+ScamShield/
+├── client/                     # Vite + React frontend web application
+│   ├── public/                 # Static assets and icons
+│   ├── src/                    # React components, API clients, and styles
+│   │   ├── api/                # API client functions communicating with backend
+│   │   ├── components/         # Modular presentation and interaction components
+│   │   ├── App.jsx             # Top-level state-machine controller (form/analyzing/results)
+│   │   ├── App.css             # Main component and layout styling
+│   │   ├── index.css           # Design tokens (dark/light), reset, and base classes
+│   │   └── main.jsx            # React root mount script
+│   ├── index.html              # HTML entry point with theme hydration script
+│   ├── package.json            # Frontend dependencies (react, lucide-react, vite)
+│   └── vite.config.js          # Vite config with /api reverse proxy to port 5000
+│
+├── server/                     # Node.js + Express backend REST API
+│   ├── config/                 # Database configuration (Mongoose connector)
+│   ├── controllers/            # Request handlers (analyze, scans, health, search)
+│   ├── middleware/             # Error handling and 404 route interceptors
+│   ├── models/                 # Mongoose database schemas (Scan model)
+│   ├── routes/                 # Express route definitions aggregated under /api
+│   ├── services/               # Analysis engine, rule modules, and SerpApi integration
+│   │   ├── analysis/           # Rule engine, normalizer, and targeted search logic
+│   │   │   └── rules/          # 10 deterministic recruitment warning signal rules
+│   │   └── serpApiService.js   # Low-level official SerpApi SDK wrapper
+│   ├── tests/                  # Automated unit and integration test suite (27 tests)
+│   ├── utils/                  # Structured logger utility
+│   ├── .env                    # Environment secrets (PORT, SERPAPI_KEY, MONGODB_URI)
+│   ├── .env.example            # Safe environment template
+│   ├── package.json            # Backend dependencies (express, mongoose, serpapi, cors, dotenv)
+│   └── server.js               # Express application bootstrap and graceful shutdown
+│
+├── .gitignore                  # Git exclusion rules for node_modules, .env, and caches
+└── PROGRESS.md                 # Project handover and progress documentation
+
+
+3. FRONTEND
+--------------------------------------------------------------------------------
+- Framework/library:
+  React 19, Vite 8, Lucide React (icons), Vanilla CSS design token system
+  (no Tailwind, no third-party UI component libraries).
+
+- Main pages/components:
+  - App.jsx: State coordinator managing views ('form' | 'analyzing' | 'results'),
+    browser history (popstate), and scan auto-save triggering.
+  - Header.jsx: Brand title, tagline, dark/light mode toggle, engine health status.
+  - JobForm.jsx: Input fields + 1-click test presets (Fee Scam, Spoof Scam, Legit Job).
+  - AnalyzingScreen.jsx: Dedicated progress view with horizontal progress bar and
+    5 active inspection checklist stages.
+  - ResultsView.jsx: Dedicated report page with top navigation toolbar, target info,
+    and structured assessment sections.
+  - EvidenceHub.jsx: Compact 3-category investigation grid (Company Web, Google Jobs,
+    News & Fraud Intel) with on-demand "[View Evidence]" expandable detail drawers.
+  - RecentScans.jsx: Card grid under inspection form displaying previous scans with
+    role, company, date, risk badge, and "[Open Report ->]" trigger.
+  - SummaryCard.jsx: Executive threat assessment badge and 4-metric tally grid
+    (Critical, High, Moderate, Minor).
+  - RiskIndicatorsSection.jsx: Warning signal cards with severity badges and
+    collapsible matched evidence quote snippets.
+  - VerificationSignalsSection.jsx: Compact 2-column split (Verified vs Missing)
+    with on-demand detail drawers.
+  - RecommendationsCard.jsx: Actionable candidate safety steps.
+  - ErrorAlert.jsx: Error banner with retry trigger.
+
+- How the user interacts with the app:
+  Users enter listing details or click presets, submit for live analysis, observe
+  the analyzing stage tracker, review the concise results summary, expand detailed
+  evidence drawers as needed, and revisit previous scans from the recent history grid.
+
+- Current UI/UX flow:
+  Strict 3-stage lifecycle: FORM -> ANALYZING -> RESULTS.
+  Results never render underneath the form. Navigation supports browser back
+  and forward buttons via popstate.
+
+- Theme / dark-light mode:
+  Fully implemented using CSS custom properties (:root, [data-theme="dark"] and
+  [data-theme="light"]). Toggled from the header, persisted via localStorage
+  ('scamshield_theme'), with zero-flash pre-mount script in index.html.
+
+
+4. BACKEND
+--------------------------------------------------------------------------------
+- Node/Express structure:
+  Standard layered architecture: Routes -> Controllers -> Services -> Models.
+
+- Important routes:
+  - GET  /api/health      : Backend health telemetry (status, uptime, timestamp)
+  - POST /api/analyze     : Live listing analysis through rule engine and SerpApi
+  - POST /api/scans       : Save completed analysis scan to MongoDB
+  - GET  /api/scans       : Retrieve recent scan summaries (?limit=N)
+  - GET  /api/scans/:id   : Retrieve full analysis scan by ID
+  - GET  /api/search/web  : Direct Google web search proxy
+  - GET  /api/search/jobs : Direct Google Jobs search proxy
+  - GET  /api/search/news : Direct Google News search proxy
+
+- Controllers:
+  - analyzeController.js : Validates listing input and runs analysisService.
+  - scanController.js    : Validates scan payloads, handles Mongoose CRUD, and
+                           manages fallback caching.
+  - healthController.js  : System metrics provider.
+  - searchController.js  : Validation for raw search proxies.
+
+- Services:
+  - analysisService.js             : Top-level analysis orchestrator.
+  - serpApiService.js              : Low-level SerpApi SDK client.
+  - serpApiIntelligenceService.js  : Targeted query constructor with 3-query budget.
+  - ruleEngine.js                  : Dynamic runner executing 10 warning rules.
+
+- Middleware:
+  - notFoundHandler.js : Returns 404 JSON for unmatched routes.
+  - errorHandler.js    : Centralized error handling returning structured JSON errors.
+
+- How frontend communicates with backend:
+  Frontend calls relative /api/* paths via native fetch in scamShieldApi.js.
+  Vite reverse-proxies /api requests to http://localhost:5000 in development.
+
+
+5. SERPAPI
+--------------------------------------------------------------------------------
+- Where SerpApi is integrated:
+  server/services/serpApiService.js (wrapper around official serpapi package) and
+  server/services/analysis/serpApiIntelligenceService.js (intelligence gathering).
+
+- Which searches are currently used:
+  1. Google Web Search (engine: "google"):
+     Query: '"{companyName}" official site OR careers'
+     Used to corroborate official company domain, Knowledge Graph, and legitimate portals.
+  2. Google Jobs Search (engine: "google_jobs"):
+     Query: '"{jobTitle} {companyName}"' (+ location)
+     Used to corroborate active listings syndicated across indexed job boards.
+  3. Google News Search (engine: "google_news"):
+     Query: '"{companyName}" (scam OR fraud OR fake OR fake offer OR arrest)'
+     Used to detect public cybercrime advisories, police FIRs, or impersonation reports.
+
+- How the API key is loaded:
+  Read exclusively on the backend via process.env.SERPAPI_KEY from server/.env.
+  The key is never exposed to the client, never logged, and never stored in MongoDB.
+
+- How data flows:
+  Frontend sends listing payload -> Backend builds 3 targeted queries -> Backend
+  calls SerpApi SDK -> SerpApi returns raw Google JSON -> Backend normalizes data
+  (stripping excess fields) -> Normalized evidence feeds into rule engine ->
+  Combined evidence and indicators returned to frontend.
+
+
+6. ANALYSIS LOGIC
+--------------------------------------------------------------------------------
+- How job information is analyzed:
+  Payload is normalized by normalizer.js into structured fields. The rule engine
+  runs 10 deterministic heuristic rules against the input and SerpApi evidence.
+  calculateAssessment() computes the final threat level based on indicator counts:
+  HIGH_RISK, ELEVATED_RISK, MODERATE_RISK, LOW_RISK, or INSUFFICIENT_DATA.
+
+- What warning indicators are detected (10 REAL implemented rules):
+  1. upfrontPaymentRule        : Demands for registration fees, training fees, kit deposits.
+  2. employmentPaymentRule     : Paying money to obtain employment, wallet recharge schemes.
+  3. sensitiveFinancialRule    : Asking for OTP, net banking password, ATM PIN, blank cheques.
+  4. unrealisticCompensationRule: Absurd pay (e.g. ₹6,000/day) for low-skill/minimal hours.
+  5. contactChannelRule        : Contact exclusively via Telegram/WhatsApp or public webmail.
+  6. domainMismatchRule        : Stated company domain mismatches recruiter email domain.
+  7. urgencyGuaranteedRule     : "Direct joining without interview", guaranteed selection.
+  8. taskScamRule              : Liking YouTube videos, rating Google Maps, task commissions.
+  9. suspiciousUrlRule         : URL shorteners (bit.ly) or direct chat invite links.
+  10. missingVerificationRule  : Missing legal entity name, generic labels ("Reputed MNC").
+
+- How evidence is presented:
+  - Verified Signals (positive markers confirmed by external records).
+  - Missing Signals (expected corporate signals not found).
+  - Multi-engine evidence cards with direct links to sources.
+
+- Real vs Placeholder:
+  - REAL: All 10 deterministic rules, input normalizer, SerpApi query generator,
+    zero-result handling, risk assessment calculation, and evidence extraction.
+  - NOT IMPLEMENTED (PLANNED): Automated PDF offer letter parsing, standalone UPI
+    VPA lookup, automated WHOIS domain registration age verification.
+
+
+7. MONGODB
+--------------------------------------------------------------------------------
+- Whether MongoDB is currently implemented:
+  Yes, fully implemented using Mongoose.
+
+- Connection method:
+  Mongoose v9.11.0 via mongoose.connect() inside server/config/db.js.
+  Connects to process.env.MONGODB_URI or mongodb://127.0.0.1:27017/scamshield.
+
+- Database and Collection:
+  Database: scamshield
+  Collection: scans
+
+- Schema / Model (server/models/Scan.js):
+  - input: companyName, jobTitle, jobUrl, jobDescription, salary, location, recruiterContact
+  - results: summary (assessment, headline, indicatorCounts, disclaimer, recommendations),
+             riskIndicators, webEvidence, jobEvidence, newsEvidence, verificationSignals,
+             metadata (analyzedAt, executionDurationMs, serpApiRequestsMade)
+  - createdAt: Timestamp generated via Mongoose timestamps option.
+
+- What gets saved:
+  User-provided input details and completed analysis findings. No secrets or API keys.
+
+- How scan history is retrieved:
+  - GET /api/scans?limit=N returns lightweight summary projections sorted by createdAt descending.
+  - GET /api/scans/:id returns the complete scan document with all evidence.
+
+- Current status:
+  WORKING. Features a transparent in-memory fallback cache so that if a local MongoDB
+  daemon is offline in development, scan saving and retrieval continue functioning.
+
+
+8. CURRENT FEATURES (CHECKLIST)
+--------------------------------------------------------------------------------
+[x] Job listing inspection input form
+[x] 1-Click quick test presets (Fee Scam, Spoof Scam, Legit Job)
+[x] Dedicated 5-stage Analyzing view with horizontal progress bar
+[x] Multi-engine SerpApi search intelligence (Google Web, Google Jobs, Google News)
+[x] Strictly capped 3-query SerpApi budget per analysis
+[x] Deterministic 10-rule recruitment fraud heuristic engine
+[x] Evidence-based threat assessment (zero arbitrary synthetic scam scores)
+[x] Dedicated Results report page with top toolbar and back navigation
+[x] Compact Evidence Hub with on-demand expandable detail drawers
+[x] Collapsible matched evidence quotes inside warning indicator cards
+[x] Employer verification signals audit (Verified vs Missing)
+[x] Candidate safety recommendations card
+[x] MongoDB persistence via Mongoose (POST /api/scans, GET /api/scans, GET /api/scans/:id)
+[x] In-memory database fallback for offline local development
+[x] Recent Scan History card grid on main form with instant report reopening
+[x] Dark / Light mode toggle with localStorage persistence and zero-flash reload
+[x] Fully responsive layout for desktop, tablet, and mobile viewports
+[x] Centralized error handling and health telemetry endpoint
+
+
+9. NOT YET IMPLEMENTED
+--------------------------------------------------------------------------------
+- Standalone UPI ID / VPA payment fraud verification tool
+- Standalone domain WHOIS registration age checker
+- Offer letter PDF document upload and text extractor
+- User accounts and authentication (JWT / sessions)
+- Export report as PDF or shareable public link
+- Crowd-sourced scam report submission community feed
+
+
+10. DATA FLOW
+--------------------------------------------------------------------------------
++-------------------------------------------------------------------------+
+|                                  USER                                   |
+|   Inputs job details OR clicks a Preset -> Clicks "Analyze Job"         |
++------------------------------------+------------------------------------+
+                                     |
+                                     v
++-------------------------------------------------------------------------+
+|                                FRONTEND                                 |
+|   1. Sets view = 'analyzing' (displays 5-stage progress indicator)      |
+|   2. Dispatches POST /api/analyze with formData                         |
++------------------------------------+------------------------------------+
+                                     |
+                                     v
++-------------------------------------------------------------------------+
+|                                BACKEND                                  |
+|   1. normalizer.js extracts and sanitizes inputs                        |
+|   2. serpApiIntelligenceService.js builds 3 targeted queries            |
++-------------------+---------------------------------+-------------------+
+                    |                                 |
+                    v                                 v
+     +------------------------------+  +------------------------------+
+     |           SERPAPI            |  |         RULE ENGINE          |
+     | 1. Google Web (domain/kg)    |  | Evaluates 10 deterministic   |
+     | 2. Google Jobs (postings)    |  | rules (advance fees, task    |
+     | 3. Google News (fraud alerts)|  | scams, domain mismatches)    |
+     +--------------+---------------+  +--------------+---------------+
+                    |                                 |
+                    +----------------+----------------+
+                                     |
+                                     v
++-------------------------------------------------------------------------+
+|                            ANALYSIS SERVICE                             |
+|   1. Combines rule indicators with SerpApi evidence                     |
+|   2. Computes assessment level (HIGH, ELEVATED, MODERATE, LOW, INFO)    |
+|   3. Assembles final response payload                                   |
++------------------------------------+------------------------------------+
+                                     |
+                                     v
++-------------------------------------------------------------------------+
+|                                FRONTEND                                 |
+|   1. Receives analysis result data                                      |
+|   2. Automatically calls POST /api/scans                                |
+|   3. Sets view = 'results' and displays ResultsView                     |
++-------------------+-----------------------------------------------------+
+                    |
+                    v
++-------------------------------------------------------------------------+
+|                           MONGODB / MONGOOSE                            |
+|   1. Saves scan document to 'scans' collection (with in-memory fallback)|
+|   2. Returns saved _id and createdAt                                    |
++-------------------+-----------------------------------------------------+
+                    |
+                    v
++-------------------------------------------------------------------------+
+|                           RECENT SCAN HISTORY                           |
+|   1. When user returns to form, GET /api/scans populates recent cards   |
+|   2. User clicks "Open Report" -> GET /api/scans/:id -> ResultsView     |
++-------------------------------------------------------------------------+
+
+
+11. CURRENT PHASE
+--------------------------------------------------------------------------------
+- Which phase has been completed:
+  Phase 6 (MongoDB Scan History & Persistence) and UI/UX Restructure.
+
+- What was changed in the latest phase:
+  - Installed Mongoose and created the Scan model (server/models/Scan.js).
+  - Added REST endpoints: POST /api/scans, GET /api/scans, GET /api/scans/:id.
+  - Implemented automatic database connection with in-memory fallback.
+  - Added RecentScans.jsx component on the frontend inspection form.
+  - Wired auto-save into the analysis submission lifecycle.
+  - Implemented the 3-stage UI flow (Form -> Analyzing -> Results) with
+    horizontal progress bar, 5-stage checklist, and on-demand evidence drawers.
+
+- What should be tested before moving to Phase 7:
+  1. Live analysis flow: Submit a job listing and verify analyzing screen stages.
+  2. Persistence flow: Verify scan is saved and appears in Recent Scans.
+  3. Reopen flow: Click a recent scan card and verify report opens instantly.
+  4. Theme toggle: Verify dark and light modes across Form, Analyzing, and Results.
+  5. Responsive layout: Check desktop, tablet, and mobile breakpoints.
+================================================================================

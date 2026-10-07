@@ -45,6 +45,16 @@ const server = app.listen(PORT, () => {
   logger.info(`ScamShield backend running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
 
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    logger.error(`[Server] Port ${PORT} is already in use. Please terminate any running instance or specify a different PORT.`);
+  } else {
+    logger.error(`[Server] Startup error: ${err.message}`);
+  }
+  process.exit(1);
+});
+
+
 // Handle graceful shutdown
 const gracefulShutdown = async (signal) => {
   logger.info(`${signal} received. Closing HTTP server gracefully...`);

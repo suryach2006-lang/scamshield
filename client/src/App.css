@@ -1453,6 +1453,16 @@
     flex: 1 1 calc(50% - 0.5rem);
     justify-content: center;
   }
+
+  .recent-scans-section {
+    padding: 1.25rem 1rem;
+    margin: 1.5rem 0 2.5rem 0;
+  }
+
+  .recent-scans-grid {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
 }
 
 /* ==========================================================================

@@ -1,10 +1,22 @@
 import React from 'react';
-import { ArrowLeft, Building2, MapPin, Calendar, Clock, RotateCcw, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Building2, MapPin, Clock, RotateCcw } from 'lucide-react';
 import SummaryCard from './SummaryCard';
 import RiskIndicatorsSection from './RiskIndicatorsSection';
 import EvidenceHub from './EvidenceHub';
 import VerificationSignalsSection from './VerificationSignalsSection';
 import RecommendationsCard from './RecommendationsCard';
+
+const formatAnalyzedTime = (isoString) => {
+  if (!isoString) return 'Just now';
+  try {
+    const d = new Date(isoString);
+    return isNaN(d.getTime())
+      ? 'Just now'
+      : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return 'Just now';
+  }
+};
 
 export default function ResultsView({ results, onNewAnalysis }) {
   if (!results) return null;
@@ -21,10 +33,9 @@ export default function ResultsView({ results, onNewAnalysis }) {
   const jobTitle = input.jobTitle || 'Job Offer';
   const companyName = input.companyName || 'Target Employer';
 
-  // Formatted date
-  const analyzedDate = metadata.analyzedAt
-    ? new Date(metadata.analyzedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : 'Just now';
+  // Safely formatted date
+  const analyzedDate = formatAnalyzedTime(metadata.analyzedAt);
+
 
   return (
     <main className="results-view" id="results-view">

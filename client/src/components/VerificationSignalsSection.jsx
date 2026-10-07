@@ -112,11 +112,14 @@ export default function VerificationSignalsSection({ verificationSignals }) {
           {/* Quick Signal Tags */}
           {missing.length > 0 && (
             <div className="signals-tag-list">
-              {missing.map((sig, idx) => (
-                <span key={idx} className="signal-mini-tag missing">
-                  ⚠ {sig.title || sig.signal.replace(/_/g, ' ')}
-                </span>
-              ))}
+              {missing.map((sig, idx) => {
+                const label = sig.title || (typeof sig.signal === 'string' ? sig.signal.replace(/_/g, ' ') : 'Unverified Signal');
+                return (
+                  <span key={idx} className="signal-mini-tag missing">
+                    ⚠ {label}
+                  </span>
+                );
+              })}
             </div>
           )}
 
@@ -134,24 +137,28 @@ export default function VerificationSignalsSection({ verificationSignals }) {
 
           {expandedMissing && missing.length > 0 && (
             <div className="signals-expanded-list">
-              {missing.map((sig, idx) => (
-                <div key={idx} className="signal-card missing">
-                  <div className="signal-card-title">
-                    <span>{sig.title || sig.signal.replace(/_/g, ' ')}</span>
-                    {sig.importance && (
-                      <span
-                        className={`badge ${
-                          sig.importance === 'HIGH' ? 'badge-high' : 'badge-medium'
-                        }`}
-                        style={{ fontSize: '0.68rem' }}
-                      >
-                        {sig.importance} Priority
-                      </span>
-                    )}
+              {missing.map((sig, idx) => {
+                const label = sig.title || (typeof sig.signal === 'string' ? sig.signal.replace(/_/g, ' ') : 'Unverified Signal');
+                return (
+                  <div key={idx} className="signal-card missing">
+                    <div className="signal-card-title">
+                      <span>{label}</span>
+                      {sig.importance && (
+                        <span
+                          className={`badge ${
+                            sig.importance === 'HIGH' ? 'badge-high' : 'badge-medium'
+                          }`}
+                          style={{ fontSize: '0.68rem' }}
+                        >
+                          {sig.importance} Priority
+                        </span>
+                      )}
+                    </div>
+                    <p className="signal-card-desc">{sig.description}</p>
                   </div>
-                  <p className="signal-card-desc">{sig.description}</p>
-                </div>
-              ))}
+                );
+              })}
+
             </div>
           )}
         </div>

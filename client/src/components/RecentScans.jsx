@@ -39,7 +39,7 @@ export default function RecentScans({ onOpenScan, refreshTrigger }) {
     setIsLoading(true);
     try {
       const data = await getRecentScans(10);
-      setScans(data);
+      setScans(data || []);
     } catch {
       setScans([]);
     } finally {
@@ -48,7 +48,23 @@ export default function RecentScans({ onOpenScan, refreshTrigger }) {
   };
 
   useEffect(() => {
-    fetchScans();
+    let isMounted = true;
+
+    getRecentScans(10)
+      .then((data) => {
+        if (isMounted) setScans(data || []);
+      })
+      .catch(() => {
+        if (isMounted) setScans([]);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+
+      isMounted = false;
+    };
   }, [refreshTrigger]);
 
   const handleCardClick = async (scanId) => {
@@ -61,10 +77,10 @@ export default function RecentScans({ onOpenScan, refreshTrigger }) {
       }
     } catch (err) {
       console.error('Failed to open scan:', err);
-    } finally {
       setOpeningScanId(null);
     }
   };
+
 
   const formatDate = (isoString) => {
     if (!isoString) return 'Recent';
