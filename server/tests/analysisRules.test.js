@@ -87,6 +87,77 @@ describe('Deterministic Analysis Rules', () => {
       const result = upfrontPaymentRule.evaluate(input);
       assert.equal(result.indicators.length, 0);
     });
+
+    it('should not flag explicit denials such as "No application fee or payment to individual recruiters is required"', () => {
+      const input = normalizeInput({
+        jobDescription: 'Join our enterprise development practice. No application fee or payment to individual recruiters is required at any time.'
+      });
+
+      const result = upfrontPaymentRule.evaluate(input);
+      assert.equal(result.indicators.length, 0);
+    });
+
+    it('should not flag legitimate enterprise disclaimers denying recruitment fees', () => {
+      const input = normalizeInput({
+        jobDescription: 'Infosys does not charge any application fee or registration charges at any stage of recruitment. Neither Infosys nor its partners ask for money.'
+      });
+
+      const result = upfrontPaymentRule.evaluate(input);
+      assert.equal(result.indicators.length, 0);
+    });
+
+    it('should not flag mere mentions of fees without an actual payment demand', () => {
+      const input = normalizeInput({
+        jobDescription: 'Comprehensive benefits package includes tuition reimbursement, coverage for professional certification fees, and gym membership.'
+      });
+
+      const result = upfrontPaymentRule.evaluate(input);
+      assert.equal(result.indicators.length, 0);
+    });
+
+    it('should flag genuine demands such as "Candidates must pay a ₹2,500 registration fee before receiving the offer letter"', () => {
+      const input = normalizeInput({
+        jobDescription: 'Candidates must pay a ₹2,500 registration fee before receiving the offer letter.'
+      });
+
+      const result = upfrontPaymentRule.evaluate(input);
+      assert.equal(result.indicators.length, 1);
+      assert.equal(result.indicators[0].id, 'UPFRONT_PAYMENT_FEE');
+      assert.equal(result.indicators[0].severity, 'CRITICAL');
+      assert.ok(result.indicators[0].evidence.matchedText.includes('registration fee'));
+    });
+
+    it('should flag genuine demands such as "Mandatory laptop deposit of $200 required prior to the first day"', () => {
+      const input = normalizeInput({
+        jobDescription: 'Mandatory laptop deposit of $200 required prior to the first day.'
+      });
+
+      const result = upfrontPaymentRule.evaluate(input);
+      assert.equal(result.indicators.length, 1);
+      assert.equal(result.indicators[0].id, 'UPFRONT_PAYMENT_FEE');
+      assert.ok(result.indicators[0].evidence.matchedText.includes('laptop deposit'));
+    });
+
+    it('should handle negation in one clause without suppressing a separate genuine demand elsewhere', () => {
+      const input = normalizeInput({
+        jobDescription: 'We are an ethical employer. No application fee or payment to individual recruiters is required. However, candidates must pay a ₹2,500 registration fee before receiving the offer letter.'
+      });
+
+      const result = upfrontPaymentRule.evaluate(input);
+      assert.equal(result.indicators.length, 1);
+      assert.equal(result.indicators[0].id, 'UPFRONT_PAYMENT_FEE');
+      assert.ok(result.indicators[0].evidence.matchedText.includes('registration fee'));
+      assert.ok(!result.indicators[0].evidence.matchedText.includes('No application fee'));
+    });
+
+    it('should not flag comma-delimited lists of fees when explicitly negated', () => {
+      const input = normalizeInput({
+        jobDescription: 'Our company charges no application fee, registration fee, or training charge from candidates.'
+      });
+
+      const result = upfrontPaymentRule.evaluate(input);
+      assert.equal(result.indicators.length, 0);
+    });
   });
 
   describe('Employment Payment Rule', () => {
