@@ -92,6 +92,205 @@ const extractDomain = (urlString) => {
 };
 
 /**
+ * Non-corporate platforms, search engines, aggregators, social networks, and encyclopedias.
+ * These domains are not accepted as official corporate domains unless the claimed entity itself
+ * matches the platform (e.g. Google LLC -> google.com).
+ */
+const NON_CORPORATE_DOMAINS = new Set([
+  'google.com',
+  'google.co.in',
+  'bing.com',
+  'yahoo.com',
+  'duckduckgo.com',
+  'baidu.com',
+  'yandex.com',
+  'linkedin.com',
+  'facebook.com',
+  'twitter.com',
+  'x.com',
+  'instagram.com',
+  'youtube.com',
+  'reddit.com',
+  'tiktok.com',
+  'pinterest.com',
+  'wikipedia.org',
+  'wikimedia.org',
+  'wikidata.org',
+  'indeed.com',
+  'indeed.co.in',
+  'naukri.com',
+  'glassdoor.com',
+  'glassdoor.co.in',
+  'ambitionbox.com',
+  'monster.com',
+  'foundit.in',
+  'shine.com',
+  'internshala.com',
+  'unstop.com',
+  'quora.com',
+  'simplyhired.com',
+  'ziprecruiter.com',
+  'github.com',
+  'gitlab.com',
+  'medium.com',
+  'wordpress.com',
+  'blogspot.com'
+]);
+
+const CORPORATE_STOPWORDS = new Set([
+  'inc', 'llc', 'ltd', 'limited', 'pvt', 'corp', 'corporation', 'co', 'company',
+  'group', 'the', 'and', '&', 'private', 'services', 'technologies', 'solutions',
+  'consulting', 'enterprises', 'global', 'international', 'systems', 'india',
+  'official', 'careers', 'portal'
+]);
+
+/**
+ * Normalizes a company name into core alphanumeric tokens.
+ * @param {string} name
+ * @returns {string[]}
+ */
+const extractCompanyTokens = (name) => {
+  if (!name || typeof name !== 'string') return [];
+  const words = name
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 0);
+
+  const meaningful = words.filter((w) => !CORPORATE_STOPWORDS.has(w));
+  return meaningful.length > 0 ? meaningful : words;
+};
+
+/**
+ * Validates whether an entity title from Knowledge Graph is plausibly associated with the claimed company.
+ * @param {string} entityTitle
+ * @param {string} companyName
+ * @returns {boolean}
+ */
+const isEntityNamePlausible = (entityTitle, companyName) => {
+  if (!entityTitle || !companyName) return false;
+  const companyTokens = extractCompanyTokens(companyName);
+  const entityTokens = extractCompanyTokens(entityTitle);
+  if (companyTokens.length === 0 || entityTokens.length === 0) return false;
+
+  return companyTokens.some((ct) =>
+    entityTokens.some((et) => ct === et || ct.includes(et) || et.includes(ct))
+  );
+};
+
+/**
+ * Validates whether a candidate domain is plausibly associated with the claimed company.
+ * Never accepts generic search-engine or aggregator domains unless the company is that specific entity.
+ * Tightened so that a company-name substring alone cannot establish corporate authenticity.
+ *
+ * @param {string|null} candidateDomain - Candidate domain or URL
+ * @param {string|null} companyName - Claimed company name
+ * @param {string|null} [entityTitle=null] - Optional Google Knowledge Graph entity title
+ * @returns {boolean}
+ */
+const verifyCandidateDomain = (candidateDomain, companyName, entityTitle = null) => {
+  if (!candidateDomain || !companyName) return false;
+
+  const domain = extractDomain(candidateDomain);
+  if (!domain) return false;
+
+  const domainLower = domain.toLowerCase();
+  const domainParts = domainLower.split('.');
+  const domainBase = domainParts[0];
+  const domainClean = domainBase.replace(/[^a-z0-9]/g, '');
+
+  const companyTokens = extractCompanyTokens(companyName);
+  const entityTokens = entityTitle ? extractCompanyTokens(entityTitle) : [];
+  const allTokens = [...new Set([...companyTokens, ...entityTokens])];
+
+  if (allTokens.length === 0) return false;
+
+  // Disallow search engine, social media, aggregator, or encyclopedia domains
+  // unless the claimed company is explicitly that entity
+  if (NON_CORPORATE_DOMAINS.has(domainLower)) {
+    const isBrandSelf = allTokens.some((t) => t === domainClean);
+    if (!isBrandSelf) {
+      return false;
+    }
+  }
+
+  // 1. Direct exact token match (tokens with length >= 3)
+  // Tightened: must match the domain clean base exactly, not merely as a substring or hyphenated word
+  for (const token of allTokens) {
+    if (token.length >= 3 && domainClean === token) {
+      return true;
+    }
+  }
+
+  // 2. Acronym match using all words in company name or entity title (e.g. Tata Consultancy Services -> tcs)
+  const extractAcronyms = (name) => {
+    if (!name || typeof name !== 'string') return [];
+    const words = name
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean);
+    if (words.length < 2) return [];
+
+    const acronyms = [];
+    acronyms.push(words.map((w) => w[0]).join(''));
+
+    const meaningful = words.filter((w) => !CORPORATE_STOPWORDS.has(w));
+    if (meaningful.length >= 2) {
+      acronyms.push(meaningful.map((w) => w[0]).join(''));
+    }
+
+    return acronyms.filter((a) => a.length >= 2);
+  };
+
+  const candidateAcronyms = [
+    ...extractAcronyms(companyName),
+    ...(entityTitle ? extractAcronyms(entityTitle) : [])
+  ];
+
+  if (candidateAcronyms.some((acronym) => domainClean === acronym)) {
+    return true;
+  }
+
+  // 3. Concatenated meaningful tokens exact match (e.g. Tech Mahindra -> techmahindra)
+  if (companyTokens.length >= 2) {
+    const concatenated = companyTokens.join('');
+    if (concatenated.length >= 4 && domainClean === concatenated) {
+      return true;
+    }
+  }
+
+  const rawWords = String(companyName)
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (rawWords.length >= 2) {
+    const rawConcatenated = rawWords.join('');
+    if (rawConcatenated.length >= 4 && domainClean === rawConcatenated) {
+      return true;
+    }
+  }
+
+  if (entityTitle) {
+    const entityWords = String(entityTitle)
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean);
+    if (entityWords.length >= 2) {
+      const entityConcatenated = entityWords.join('');
+      if (entityConcatenated.length >= 4 && domainClean === entityConcatenated) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
+
+/**
  * Gathers and normalizes SerpApi evidence across Web, Google Jobs, and Google News.
  * Strictly limits requests to at most 3 targeted searches per analysis.
  *
@@ -110,6 +309,7 @@ const extractDomain = (urlString) => {
  */
 const gatherSerpApiEvidence = async (normalizedInput, options = {}) => {
   const isEnabled = options.enabled !== false && Boolean(process.env.SERPAPI_KEY);
+  let verifiedSourceUrl = null;
 
   const baseResult = {
     webEvidence: {
@@ -184,12 +384,30 @@ const gatherSerpApiEvidence = async (normalizedInput, options = {}) => {
         displayedLink: r.displayedLink || ''
       }));
 
-      // Extract official domain from knowledge graph or top organic result
+      // Extract and verify official domain from knowledge graph or top organic results
       let officialDomain = null;
-      if (kg && kg.website) {
-        officialDomain = extractDomain(kg.website);
-      } else if (topResults.length > 0 && topResults[0].link) {
-        officialDomain = extractDomain(topResults[0].link);
+      const companyName = (normalizedInput.companyName || '').trim();
+
+      // 1. Evaluate Knowledge Graph website candidate
+      if (kg && kg.website && companyName) {
+        const candidateKgDomain = extractDomain(kg.website);
+        if (verifyCandidateDomain(candidateKgDomain, companyName, kg.title)) {
+          officialDomain = candidateKgDomain;
+          verifiedSourceUrl = kg.website;
+        }
+      }
+
+      // 2. If Knowledge Graph did not establish a verified domain, evaluate top organic results
+      if (!officialDomain && companyName && topResults.length > 0) {
+        for (const result of topResults) {
+          if (!result.link) continue;
+          const candidateDomain = extractDomain(result.link);
+          if (verifyCandidateDomain(candidateDomain, companyName)) {
+            officialDomain = candidateDomain;
+            verifiedSourceUrl = result.link;
+            break;
+          }
+        }
       }
 
       baseResult.webEvidence.status = 'COMPLETED';
@@ -198,8 +416,10 @@ const gatherSerpApiEvidence = async (normalizedInput, options = {}) => {
       baseResult.webEvidence.officialDomain = officialDomain;
       baseResult.webEvidence.topResults = topResults;
 
-      // Verification signal: verified web presence
-      if (kg && kg.title) {
+      const isKgEntityValid = kg && kg.title && (!companyName || isEntityNamePlausible(kg.title, companyName));
+
+      // Verification signal emission: keep verified corporate presence separate from general indexed search
+      if (isKgEntityValid) {
         baseResult.verifiedSignals.push({
           signal: 'VERIFIED_KNOWLEDGE_GRAPH',
           category: 'COMPANY_IDENTITY',
@@ -207,20 +427,30 @@ const gatherSerpApiEvidence = async (normalizedInput, options = {}) => {
           description: `Google Knowledge Graph confirms "${kg.title}" as an established ${kg.type || 'organization'}.`,
           sourceUrl: kg.website || null
         });
-      } else if (topResults.length > 0) {
+      }
+
+      if (officialDomain) {
         baseResult.verifiedSignals.push({
-          signal: 'INDEXED_CORPORATE_PORTAL',
+          signal: 'VERIFIED_CORPORATE_DOMAIN',
           category: 'COMPANY_IDENTITY',
-          title: 'Indexed Corporate Web Presence Found',
-          description: `Search returned indexed web presences matching "${normalizedInput.companyName || normalizedInput.jobTitle}".`,
+          title: 'Verified Corporate Web Domain Found',
+          description: `Web search confirmed authentic corporate domain "${officialDomain}" matching "${companyName || normalizedInput.jobTitle}".`,
+          sourceUrl: verifiedSourceUrl || topResults[0]?.link || null
+        });
+      } else if (!isKgEntityValid && topResults.length > 0) {
+        baseResult.verifiedSignals.push({
+          signal: 'INDEXED_WEB_PRESENCE',
+          category: 'COMPANY_IDENTITY',
+          title: 'General Web Search Results Found',
+          description: `Search returned indexed web results matching "${companyName || normalizedInput.jobTitle}", but official corporate domain verification remains inconclusive.`,
           sourceUrl: topResults[0].link
         });
-      } else if (normalizedInput.companyName) {
+      } else if (!isKgEntityValid && companyName && topResults.length === 0) {
         baseResult.missingSignals.push({
           signal: 'NO_INDEXED_COMPANY_WEB_PRESENCE',
           category: 'COMPANY_VERIFICATION',
           title: 'No Verified Web Presence Found in Search',
-          description: `Web search for "${normalizedInput.companyName}" yielded no verifiable official domain or knowledge graph. Note: Search absence alone does not prove fraud, but candidates should independently verify corporate registration.`,
+          description: `Web search for "${companyName}" yielded no verifiable official domain or knowledge graph. Note: Search absence alone does not prove fraud, but candidates should independently verify corporate registration.`,
           importance: 'HIGH'
         });
       }
@@ -368,7 +598,7 @@ const gatherSerpApiEvidence = async (normalizedInput, options = {}) => {
             evidence: {
               source: 'web_search_cross_reference',
               verifiedCorporateDomain: verifiedDomain,
-              verifiedSourceUrl: baseResult.webEvidence.topResults[0]?.link || null,
+              verifiedSourceUrl: verifiedSourceUrl || baseResult.webEvidence.topResults[0]?.link || null,
               recruiterEmail: emailObj.email,
               recruiterDomain
             }
@@ -385,5 +615,6 @@ const gatherSerpApiEvidence = async (normalizedInput, options = {}) => {
 module.exports = {
   gatherSerpApiEvidence,
   buildQueries,
-  extractDomain
+  extractDomain,
+  verifyCandidateDomain
 };
