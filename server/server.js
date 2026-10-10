@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 const dotenv = require('dotenv');
 
 // Load environment variables from .env
@@ -33,6 +34,28 @@ connectDB();
 
 // API Routes
 app.use('/api', apiRoutes);
+
+// Static frontend build directory (Vite outputs to client/dist)
+const clientBuildPath = path.resolve(__dirname, '../client/dist');
+app.use(express.static(clientBuildPath));
+
+// React SPA fallback for non-API frontend routes
+app.get('{*splat}', (req, res, next) => {
+  // Ensure unmatched API routes bypass the SPA fallback and receive JSON error responses
+  if (/^\/api(\/|$)/.test(req.originalUrl) || /^\/api(\/|$)/.test(req.path)) {
+    return next();
+  }
+
+  const indexPath = path.join(clientBuildPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath, (err) => {
+      if (err) {
+        next(err);
+      }
+    });
+  }
+  next();
+});
 
 // Error handling middleware
 app.use(notFoundHandler);
