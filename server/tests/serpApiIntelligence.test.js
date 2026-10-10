@@ -14,6 +14,7 @@ const {
   refersToCompany
 } = require('../services/analysis/serpApiIntelligenceService');
 const { normalizeInput } = require('../services/analysis/normalizer');
+const { analyzeJobListing } = require('../services/analysis');
 const serpApiService = require('../services/serpApiService');
 
 describe('SerpApi Intelligence Query Construction', () => {
@@ -483,3 +484,221 @@ describe('Google News Intelligence & False-Positive Prevention', () => {
     assert.equal(errorResult.additionalIndicators.some((i) => i.id === 'PUBLIC_NEWS_SCAM_REPORT'), false);
   });
 });
+
+describe('End-to-End False-Positive and Scam Detection Regressions', () => {
+  let originalSearchGoogle;
+  let originalSearchJobs;
+  let originalSearchNews;
+  let originalApiKey;
+
+  beforeEach(() => {
+    originalSearchGoogle = serpApiService.searchGoogle;
+    originalSearchJobs = serpApiService.searchJobs;
+    originalSearchNews = serpApiService.searchNews;
+    originalApiKey = process.env.SERPAPI_KEY;
+    process.env.SERPAPI_KEY = 'test_mock_serpapi_key';
+  });
+
+  afterEach(() => {
+    serpApiService.searchGoogle = originalSearchGoogle;
+    serpApiService.searchJobs = originalSearchJobs;
+    serpApiService.searchNews = originalSearchNews;
+    if (originalApiKey !== undefined) {
+      process.env.SERPAPI_KEY = originalApiKey;
+    } else {
+      delete process.env.SERPAPI_KEY;
+    }
+  });
+
+  it('should assess a legitimate-looking Infosys listing as LOW_RISK without false-positive domain mismatch or fee warnings', async () => {
+    serpApiService.searchGoogle = async () => ({
+      results: [
+        {
+          title: 'Infosys - Consulting | IT Services',
+          link: 'https://www.infosys.com',
+          snippet: 'Infosys is a global leader in next-generation digital services'
+        }
+      ],
+      knowledgeGraph: {
+        title: 'Infosys',
+        type: 'Information technology company',
+        website: 'https://www.infosys.com'
+      }
+    });
+
+    serpApiService.searchJobs = async () => ({
+      jobs: [
+        {
+          id: 'job-1',
+          title: 'Senior Systems Engineer',
+          companyName: 'Infosys Limited',
+          location: 'Bangalore, India',
+          via: 'Naukri',
+          applyOptions: [{ link: 'https://www.infosys.com/careers' }]
+        }
+      ]
+    });
+
+    serpApiService.searchNews = async () => ({ news: [] });
+
+    const input = {
+      companyName: 'Infosys Limited',
+      jobTitle: 'Senior Systems Engineer',
+      location: 'Bangalore, India',
+      jobDescription: 'Seeking Senior Systems Engineer with 3+ years experience in Java and Spring Boot microservices. No application fee is required at any time.',
+      jobUrl: 'https://www.infosys.com/careers',
+      recruiterContact: 'recruiter@infosys.co.in'
+    };
+
+    const result = await analyzeJobListing(input, { enableWebSearch: true });
+
+    assert.equal(result.summary.assessment, 'LOW_RISK');
+    assert.equal(result.summary.indicatorCounts.critical, 0);
+    assert.equal(result.summary.indicatorCounts.high, 0);
+    assert.equal(result.riskIndicators.length, 0);
+    // Crucially: legitimate corporate ccTLD infosys.co.in must not trigger VERIFIED_DOMAIN_MISMATCH
+    assert.equal(result.riskIndicators.some((i) => i.id === 'VERIFIED_DOMAIN_MISMATCH'), false);
+    assert.equal(result.verificationSignals.verifiedSignals.some((s) => s.signal === 'VERIFIED_CORPORATE_DOMAIN'), true);
+  });
+
+  it('should assess an Infosys impersonation listing as HIGH_RISK when strong fraud indicators are present', async () => {
+    serpApiService.searchGoogle = async () => ({
+      results: [
+        {
+          title: 'Infosys - Consulting | IT Services',
+          link: 'https://www.infosys.com',
+          snippet: 'Infosys is a global leader in next-generation digital services'
+        }
+      ],
+      knowledgeGraph: {
+        title: 'Infosys',
+        type: 'Information technology company',
+        website: 'https://www.infosys.com'
+      }
+    });
+
+    serpApiService.searchJobs = async () => ({ jobs: [] });
+    serpApiService.searchNews = async () => ({ news: [] });
+
+    const input = {
+      companyName: 'Infosys Limited',
+      jobTitle: 'Remote Data Entry Clerk',
+      location: 'Remote',
+      jobDescription: 'Immediate joining without interview! Candidates must pay a ₹1,500 registration fee for the typing software kit before receiving the offer letter.',
+      recruiterContact: 'Contact HR via Telegram @infosys_recruiter or hr-infosys@gmail.com',
+      jobUrl: 'https://infosys-careers-portal.xyz/apply'
+    };
+
+    const result = await analyzeJobListing(input, { enableWebSearch: true });
+
+    assert.equal(result.summary.assessment, 'HIGH_RISK');
+    assert.ok(result.summary.indicatorCounts.critical >= 1, 'Expected at least 1 critical indicator for registration fee');
+    assert.ok(result.riskIndicators.some((i) => i.id === 'UPFRONT_PAYMENT_FEE'), 'Expected UPFRONT_PAYMENT_FEE');
+    assert.ok(result.riskIndicators.some((i) => i.id === 'ANONYMOUS_MESSAGING_CHANNEL'), 'Expected ANONYMOUS_MESSAGING_CHANNEL');
+    assert.ok(result.riskIndicators.some((i) => i.id === 'PUBLIC_WEBMAIL_RECRUITER'), 'Expected PUBLIC_WEBMAIL_RECRUITER');
+    assert.ok(result.riskIndicators.some((i) => i.id === 'SUSPICIOUS_TLD_PORTAL'), 'Expected SUSPICIOUS_TLD_PORTAL');
+  });
+
+  it('should not flag an unrelated news result that mentions scams without establishing a connection to the listing', async () => {
+    serpApiService.searchGoogle = async () => ({
+      results: [
+        {
+          title: 'Infosys - Consulting | IT Services',
+          link: 'https://www.infosys.com',
+          snippet: 'Infosys is a global leader in next-generation digital services'
+        }
+      ],
+      knowledgeGraph: {
+        title: 'Infosys',
+        type: 'Information technology company',
+        website: 'https://www.infosys.com'
+      }
+    });
+
+    serpApiService.searchJobs = async () => ({
+      jobs: [
+        {
+          id: 'job-cloud',
+          title: 'Senior Cloud Engineer',
+          companyName: 'Infosys Limited',
+          location: 'Bangalore, India',
+          via: 'LinkedIn'
+        }
+      ]
+    });
+
+    // Unrelated scam news mentioning gaming or visa fraud where Infosys is mentioned only in passing
+    serpApiService.searchNews = async () => ({
+      news: [
+        {
+          title: 'Nationwide job scam syndicate busted: 8 arrested for running fake placement agency',
+          snippet: 'The gang lured victims promising overseas visas. In an unrelated report, Infosys announced quarterly financial results.',
+          source: 'National News Wire',
+          link: 'https://news.example.com/gang-busted'
+        },
+        {
+          title: 'Credit card scam: Cyber cell warns against phishing SMS',
+          snippet: 'Authorities caution citizens against fake utility bill messages. Meanwhile, tech stocks including Infosys traded higher.',
+          source: 'Business Times',
+          link: 'https://news.example.com/phishing-alert'
+        }
+      ]
+    });
+
+    const input = {
+      companyName: 'Infosys Limited',
+      jobTitle: 'Senior Cloud Engineer',
+      location: 'Bangalore, India',
+      jobDescription: 'Designing scalable cloud architecture on AWS and Azure. Requires 5 years experience.',
+      recruiterContact: 'careers@infosys.com',
+      jobUrl: 'https://www.infosys.com/careers'
+    };
+
+    const result = await analyzeJobListing(input, { enableWebSearch: true });
+
+    // Articles should be stored in raw newsEvidence for auditability
+    assert.equal(result.newsEvidence.articles.length, 2);
+    // Crucially: neither article connects to Infosys recruitment fraud
+    assert.equal(result.newsEvidence.flaggedAlerts.length, 0);
+    assert.equal(result.newsEvidence.alertsFound, false);
+    assert.equal(result.riskIndicators.some((i) => i.id === 'PUBLIC_NEWS_SCAM_REPORT'), false);
+    assert.equal(result.summary.assessment, 'LOW_RISK');
+  });
+
+  it('should assess a suspicious listing from an unfamiliar company as HIGH_RISK based on strong evidence', async () => {
+    serpApiService.searchGoogle = async () => ({
+      results: [
+        {
+          title: 'Quick Cash Tasks Discussion',
+          link: 'https://forum.example.com/thread/123',
+          snippet: 'User discussions on online work from home forums'
+        }
+      ],
+      knowledgeGraph: null
+    });
+
+    serpApiService.searchJobs = async () => ({ jobs: [] });
+    serpApiService.searchNews = async () => ({ news: [] });
+
+    // Unfamiliar, unrated company with undeniable scam markers
+    const input = {
+      companyName: 'Swift Global Tasks LLC',
+      jobTitle: 'Daily Video Rating Associate',
+      location: 'Remote',
+      jobDescription: 'Direct joining without interview! Earn up to ₹6,000 per day working only 1-2 hours daily. Rate Google maps for commission and top-up wallet balance to unlock tasks. Candidate must pay a registration fee of ₹1,500.',
+      recruiterContact: 'Contact coordinator on Telegram @swift_task_manager',
+      salary: '₹6,000 / day'
+    };
+
+    const result = await analyzeJobListing(input, { enableWebSearch: true });
+
+    assert.equal(result.summary.assessment, 'HIGH_RISK');
+    assert.ok(result.summary.indicatorCounts.critical >= 1, 'Expected at least 1 critical indicator for registration fee');
+    assert.ok(result.riskIndicators.some((i) => i.id === 'UPFRONT_PAYMENT_FEE'), 'Expected UPFRONT_PAYMENT_FEE');
+    assert.ok(result.riskIndicators.some((i) => i.id === 'UNREALISTIC_COMPENSATION'), 'Expected UNREALISTIC_COMPENSATION');
+    assert.ok(result.riskIndicators.some((i) => i.id === 'TASK_BASED_SCAM_PATTERN'), 'Expected TASK_BASED_SCAM_PATTERN');
+    assert.ok(result.riskIndicators.some((i) => i.id === 'ANONYMOUS_MESSAGING_CHANNEL'), 'Expected ANONYMOUS_MESSAGING_CHANNEL');
+    assert.ok(result.riskIndicators.some((i) => i.id === 'URGENT_UNVERIFIED_OFFER'), 'Expected URGENT_UNVERIFIED_OFFER');
+  });
+});
+

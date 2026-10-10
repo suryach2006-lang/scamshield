@@ -439,14 +439,14 @@ npm test
 
 ### Verified Test Results
 ```
-ℹ tests 51
-ℹ suites 18
-ℹ pass 51
+ℹ tests 55
+ℹ suites 19
+ℹ pass 55
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms ~665ms
+ℹ duration_ms ~700ms
 ```
 
 ### Test Coverage Breakdown
@@ -454,10 +454,11 @@ npm test
    - Validates input normalizer (camelCase/snake_case, phone/social handle extraction).
    - Validates all 10 threat rules (fee detection, non-fee denial preservation, wallet top-ups, sensitive passwords, exorbitant daily income, Telegram/WhatsApp channels, domain mismatch, task scams, shorteners, generic employers).
    - Validates dynamic custom rule registration and rule engine execution.
-2. **`tests/serpApiIntelligence.test.js` (15 tests across 3 suites):**
+2. **`tests/serpApiIntelligence.test.js` (19 tests across 4 suites):**
    - Validates SerpApi query construction, title-only queries, ccTLD domain extraction (`.co.in`, `.co.uk`), and graceful skipping.
    - Validates lookalike domain rejection (preventing false-positive verified domains for `infosys-careers-fraud.com` or `notinfosys.com`).
-   - Validates Google News intelligence (prevents flagging legitimate companies when news covers impersonation scams).
+   - Validates Google News intelligence (prevents flagging legitimate companies when news covers impersonation scams or general cybercrime).
+   - End-to-end regression tests verifying legitimate corporate listings (Infosys ccTLD `.co.in`), active fraud/impersonation detection, unrelated news isolation, and unfamiliar company scam detection.
 3. **`tests/apiAnalyze.test.js` (3 tests):**
    - Validates input validation errors, full scan analysis execution, and clean enterprise opening results.
 4. **`tests/apiScans.test.js` (6 tests):**
@@ -500,7 +501,7 @@ For judges and evaluators reviewing ScamShield, here is a quick step-by-step ver
 
 - [ ] **1. Clean Environment:** Node.js 18+ installed, dependencies installed in `server` and `client`.
 - [ ] **2. Health Check:** Navigate to `http://localhost:5000/api/health` -> verify status is `OK`.
-- [ ] **3. Automated Tests:** Run `npm test` in `server` -> verify all **51 tests pass**.
+- [ ] **3. Automated Tests:** Run `npm test` in `server` -> verify all **55 tests pass**.
 - [ ] **4. Linter Check:** Run `npm run lint` in `client` -> verify **0 errors**.
 - [ ] **5. Launch UI:** Open `http://localhost:5173` -> dark/light theme switch operates smoothly.
 - [ ] **6. 1-Click Fee Scam Preset:** Click **"Fee Scam"** -> Click **"Inspect Job Listing"** -> Observe 5-stage progress tracker -> Results view displays **HIGH RISK** with matched registration fee quotes.

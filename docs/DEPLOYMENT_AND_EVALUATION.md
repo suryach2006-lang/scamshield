@@ -286,20 +286,21 @@ npm test
 
 **Expected Result:**
 ```
-ℹ tests 51
-ℹ suites 18
-ℹ pass 51
+ℹ tests 55
+ℹ suites 19
+ℹ pass 55
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms ~665ms
+ℹ duration_ms ~700ms
 ```
 
 ### What These Tests Cover:
 - **Rule Verification:** Registration fees, kit charges, task wallets, sensitive banking/OTP solicitations, Telegram recruiter channels, free webmail impersonation, URL shorteners, and generic company names.
-- **Corporate Domain Verification:** Tight domain validation preventing lookalike domains (`infosys-careers-fraud.com`, `notinfosys.com`) from being falsely verified.
-- **Google News Intelligence:** Ensuring news coverage of impersonation scams does not unfairly flag a legitimate company's genuine listings.
+- **Corporate Domain Verification:** Tight domain validation preventing lookalike domains (`infosys-careers-fraud.com`, `notinfosys.com`) from being falsely verified, while respecting authentic ccTLDs (`infosys.co.in`).
+- **Google News Intelligence:** Ensuring news coverage of impersonation scams or general cybercrime does not unfairly flag a legitimate company's genuine listings.
+- **End-to-End False-Positive Regressions:** End-to-end test cases verifying legitimate corporate postings (Infosys), brand impersonation scams, unrelated scam news isolation, and unfamiliar company scam detection.
 - **API Endpoints:** Request validation, analysis pipeline orchestration, and CRUD persistence in `scanController`.
 
 ---
@@ -311,7 +312,7 @@ Use this checklist during your evaluation session:
 | # | Step | Verification Action | Expected Outcome |
 |---|---|---|---|
 | 1 | **Prerequisites** | Run `node -v` | Node.js v18.0.0 or higher |
-| 2 | **Tests** | Run `npm test` in `server/` | All **51 tests pass** (0 failures) |
+| 2 | **Tests** | Run `npm test` in `server/` | All **55 tests pass** (0 failures) |
 | 3 | **Linter** | Run `npm run lint` in `client/` | 0 warnings, 0 errors |
 | 4 | **Health Check** | Open `http://localhost:5000/api/health` | Returns `{"status":"OK",...}` |
 | 5 | **Frontend Launch** | Open `http://localhost:5173` | UI loads with Dark/Light theme toggle |

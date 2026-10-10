@@ -14,7 +14,7 @@ ScamShield is an evidence-based recruitment and job listing fraud intelligence p
 - **Backend:** Node.js Express 5 REST API running locally on `http://localhost:5000`. Status: **Operational**.
 - **Database:** MongoDB Atlas cluster connected via Mongoose 9. The `test.scans` collection contains **3 existing saved scan documents**. Status: **Connected & Verified**.
 - **Scan History:** Available in the UI and via `GET /api/scans`. Persists across server restarts when MongoDB is connected. Status: **Operational**.
-- **Automated Tests:** **51 of 51 tests passing** across 18 test suites using Node.js's native test runner (`node:test`). Status: **Verified passing (2026-10-10)**.
+- **Automated Tests:** **55 of 55 tests passing** across 19 test suites using Node.js's native test runner (`node:test`). Status: **Verified passing (2026-10-10)**.
 - **Frontend Linter:** Oxlint passing with **0 errors and 0 warnings** across 15 files. Status: **Verified passing**.
 - **Documentation:** `README.md`, `docs/DEPLOYMENT_AND_EVALUATION.md`, and `server/.env.example` are complete, verified, and committed.
 - **Hackathon Submission Status:** **Unknown / Unverified** (submission preparation worked on; final portal submission status must be verified by the user).
@@ -52,11 +52,15 @@ ScamShield is an evidence-based recruitment and job listing fraud intelligence p
   9. `suspiciousUrlRule`: Detects link shorteners (`bit.ly`, `tinyurl.com`) concealing destination URLs and direct chat invites.
   10. `missingVerificationRule`: Flags anonymous or vague employer identities (e.g., "Reputed MNC").
 - [x] **Corporate Domain Verification Refinement:**
-  - Strengthened `verifyCandidateDomain` logic to prevent lookalike domains (e.g., `infosys-careers-fraud.com`, `notinfosys.com`) from being falsely verified as official domains.
+  - Strengthened `verifyCandidateDomain` logic to prevent lookalike domains (e.g., `infosys-careers-fraud.com`, `notinfosys.com`, `infosys.com.fake-domain.net`) from being falsely verified as official domains.
   - Corporate name substring alone no longer establishes authenticity without domain-level validation.
+  - Refined domain cross-verification so authentic corporate regional domains and subdomains (e.g., `infosys.co.in`, `careers.infosys.com`) are recognized as authentic when corroborated against the primary corporate entity, preventing false-positive `VERIFIED_DOMAIN_MISMATCH` indicators on legitimate multi-TLD enterprise postings.
 - [x] **Google News False-Positive Refinement:**
   - Public news reports about scammers impersonating a company are retained as contextual evidence (`newsEvidence.articles`) but **no longer trigger an automatic HIGH-severity indicator** against a submitted listing.
+  - Contextual alerts require co-occurrence between the company and recruitment fraud patterns (in title or sentence/clause proximity), preventing passing mentions in unrelated fraud or financial news from triggering advisory warnings.
   - Contextual alerts are generated for fake offers without asserting that the submitted listing itself is fraudulent.
+- [x] **End-to-End Regression Suite:**
+  - Added 4 comprehensive regression tests covering: (1) Legitimate Infosys listing evaluated as `LOW_RISK` without false red flags, (2) Infosys impersonation scam evaluated as `HIGH_RISK` when genuine fraud indicators are present, (3) Unrelated scam news mentioning company in passing evaluated as `LOW_RISK`, and (4) Suspicious listing from unfamiliar company evaluated as `HIGH_RISK`.
 
 ### MongoDB Atlas Persistence & Scan History
 - [x] **MongoDB Atlas Connection:** Configured via `MONGODB_URI` in `server/config/db.js` using Mongoose 9.
@@ -148,9 +152,9 @@ ScamShield/
     │       ├── ruleEngine.js          # Modular deterministic rule engine
     │       ├── serpApiIntelligenceService.js # 3-query budget search coordinator
     │       └── rules/                 # 10 deterministic threat detection rules
-    ├── tests/                         # Native Node.js test suite (51 passing tests)
+    ├── tests/                         # Native Node.js test suite (55 passing tests)
     │   ├── analysisRules.test.js      # Unit tests for normalizer and 10 threat rules (27 tests)
-    │   ├── serpApiIntelligence.test.js # Domain verification & news false-positive tests (15 tests)
+    │   ├── serpApiIntelligence.test.js # Domain verification, news false-positives & E2E regressions (19 tests)
     │   ├── apiAnalyze.test.js         # API integration tests for /api/analyze (3 tests)
     │   └── apiScans.test.js           # API integration tests for /api/scans (6 tests)
     └── utils/
@@ -173,7 +177,7 @@ ScamShield/
 
 - [x] **Verify Git Security:** Confirm `.env` is ignored and no secrets exist in git history. *(Verified: untracked, ignored, never committed).*
 - [x] **Verify Documentation:** Ensure `README.md` and `docs/DEPLOYMENT_AND_EVALUATION.md` exist and match the actual implementation. *(Verified).*
-- [x] **Verify Automated Test Suite:** Rerun test suite and verify test results. *(Verified: 51/51 passing on 2026-10-10).*
+- [x] **Verify Automated Test Suite:** Rerun test suite and verify test results. *(Verified: 55/55 passing on 2026-10-10).*
 - [ ] **Rotate MongoDB Password:** Check whether the MongoDB database user password previously printed in terminal output has been rotated in MongoDB Atlas, and update `server/.env` accordingly. *(Do not expose old or new password).*
 - [ ] **Perform End-to-End Demo Run:** Complete one full manual walkthrough (load UI -> run preset -> verify report -> restart server -> verify persistence in UI).
 - [ ] **Verify Hackathon Submission:** Check the SerpApi India Hackathon portal to confirm final project submission status.
@@ -188,7 +192,7 @@ When demonstrating or evaluating ScamShield:
 | Step | Action | Expected Output | Status |
 |---|---|---|---|
 | **1. Health Check** | `curl http://localhost:5000/api/health` | Returns HTTP 200 with `status: "OK"` | [x] Verified |
-| **2. Test Suite** | Run `npm test` in `server/` | **51 tests pass** across 18 suites (0 failures) | [x] Verified |
+| **2. Test Suite** | Run `npm test` in `server/` | **55 tests pass** across 19 suites (0 failures) | [x] Verified |
 | **3. Linter** | Run `npm run lint` in `client/` | **0 errors, 0 warnings** across 15 files | [x] Verified |
 | **4. Database Connection** | Start backend with `npm start` | Log shows `[MongoDB] Connected successfully to ...` | [x] Verified |
 | **5. Saved Scans Check** | Fetch `GET http://localhost:5000/api/scans` | Returns HTTP 200 with 3 existing scan documents | [x] Verified |
@@ -205,7 +209,7 @@ When demonstrating or evaluating ScamShield:
 # Install dependencies
 npm install
 
-# Run automated tests (51 tests)
+# Run automated tests (55 tests)
 npm test
 
 # Start Express server on port 5000

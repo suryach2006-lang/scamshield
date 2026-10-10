@@ -407,7 +407,27 @@ const isRecruitmentScamAlert = (article, companyName) => {
     /\bnever\s+(?:charges?|demands?)\s+(?:any\s+)?(?:fees?|money)\s+(?:for\s+recruitment|for\s+employment|for\s+jobs?)\b/i
   ];
 
-  return recruitmentFraudPatterns.some((pattern) => pattern.test(fullText));
+  // 3. Must establish a relevant contextual connection between the scam and the claimed company:
+  // Either the title connects both, or at least one sentence/clause connects both
+  const titleHasCompany = refersToCompany(title, companyName);
+  const titleHasFraudPattern = recruitmentFraudPatterns.some((pattern) => pattern.test(title));
+  if (titleHasCompany && titleHasFraudPattern) {
+    return true;
+  }
+
+  const clauses = fullText
+    .split(/[.!?\n;]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const clauseConnectsBoth = clauses.some((clause) => {
+    return (
+      refersToCompany(clause, companyName) &&
+      recruitmentFraudPatterns.some((pattern) => pattern.test(clause))
+    );
+  });
+
+  return clauseConnectsBoth;
 };
 
 /**
@@ -704,11 +724,30 @@ const gatherSerpApiEvidence = async (normalizedInput, options = {}) => {
 
   // --- 4. Cross-Verification: Verified Web Domain vs Provided Recruiter Domain ---
   const verifiedDomain = baseResult.webEvidence.officialDomain;
+  const companyName = (normalizedInput.companyName || '').trim();
+
   if (verifiedDomain && normalizedInput.recruiterContact.emailDetails.length > 0) {
     for (const emailObj of normalizedInput.recruiterContact.emailDetails) {
       if (!emailObj.isPublicWebmail) {
         const recruiterDomain = emailObj.domain.toLowerCase();
-        if (recruiterDomain !== verifiedDomain.toLowerCase() && !recruiterDomain.endsWith(`.${verifiedDomain.toLowerCase()}`)) {
+        const verifiedDomainLower = verifiedDomain.toLowerCase();
+
+        // 1. Direct match or subdomain of the verified domain (e.g. 'careers.infosys.com' ends with '.infosys.com')
+        const isExactOrSubdomain =
+          recruiterDomain === verifiedDomainLower ||
+          recruiterDomain.endsWith(`.${verifiedDomainLower}`);
+
+        // 2. Alternative authentic corporate ccTLD or domain for this employer
+        // (e.g. web search verified 'infosys.com' but recruiter uses 'infosys.co.in', which verifyCandidateDomain confirms)
+        const isAuthenticCompanyDomain =
+          Boolean(companyName && verifyCandidateDomain(recruiterDomain, companyName));
+
+        // 3. Subdomain of an authentic corporate domain (e.g. 'careers.infosys.co.in' -> extractDomain is 'infosys.co.in')
+        const recruiterPrimaryDomain = extractDomain(recruiterDomain);
+        const isAuthenticPrimaryDomain =
+          Boolean(recruiterPrimaryDomain && companyName && verifyCandidateDomain(recruiterPrimaryDomain, companyName));
+
+        if (!isExactOrSubdomain && !isAuthenticCompanyDomain && !isAuthenticPrimaryDomain) {
           baseResult.additionalIndicators.push({
             id: 'VERIFIED_DOMAIN_MISMATCH',
             type: INDICATOR_TYPES.DOMAIN_MISMATCH,
