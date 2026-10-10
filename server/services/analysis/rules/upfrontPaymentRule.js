@@ -13,11 +13,13 @@ const UPFRONT_PAYMENT_PATTERNS = [
   { pattern: /\b(?:registration|registering)\s+fee(?:s)?\b/gi, label: 'registration fee' },
   { pattern: /\b(?:application|processing)\s+fee(?:s)?\b/gi, label: 'application/processing fee' },
   { pattern: /\b(?:refundable\s+)?security\s+deposit\b/gi, label: 'security deposit' },
+  { pattern: /\b(?:refundable|non[\s-]?refundable)\s+(?:registration|application|processing|security|training)?\s*(?:fee|fees|deposit|deposits|charge|charges)\b/gi, label: 'refundable fee or deposit' },
   { pattern: /\b(?:training|certification)\s+(?:fee|cost|charge|charges|amount)\b/gi, label: 'training fee' },
   { pattern: /\b(?:laptop|equipment|tool|kit|uniform|id\s+card|badge)\s+(?:deposit|fee|charge|cost)\b/gi, label: 'equipment/kit fee' },
   { pattern: /\b(?:courier|shipping|delivery)\s+(?:fee|charge|cost)\s+(?:for\s+kit|for\s+laptop|to\s+receive)\b/gi, label: 'delivery fee for kit', isInherentlyDemand: true },
   { pattern: /\b(?:interview|examination|exam|slot\s+booking)\s+fee(?:s)?\b/gi, label: 'interview or exam fee' },
-  { pattern: /\bpay\s+(?:rs\.?|inr|₹|\$|usd|eur|£)\s*\d+/gi, label: 'direct payment request', isInherentlyDemand: true },
+  { pattern: /\bpay\s+(?:a|an|the)?\s*(?:refundable|non[\s-]?refundable|nominal)?\s*(?:registration|application|processing|interview)?\s*(?:fee|fees|deposit|deposits|charge|charges)\b/gi, label: 'direct fee payment request', isInherentlyDemand: true },
+  { pattern: /\bpay\s+[^.]{0,35}?(?:rs\.?|inr|₹|\$|usd|eur|£)\s*\d+/gi, label: 'direct payment request', isInherentlyDemand: true },
   { pattern: /\b(?:deposit|transfer|send)\s+(?:rs\.?|inr|₹|\$)\s*\d+\s+(?:for|to|before)\b/gi, label: 'transfer money before joining', isInherentlyDemand: true },
   { pattern: /\bnominal\s+(?:fee|charge|deposit)\s+(?:of\s+rs|of\s+₹|of\s+\$|\d+)\b/gi, label: 'nominal fee request', isInherentlyDemand: true }
 ];
@@ -42,7 +44,7 @@ const EXPLICIT_DENIAL_PATTERNS = [
 // Patterns that confirm a payment demand or obligation in a non-negated clause
 const DEMAND_INDICATOR_PATTERNS = [
   /\b(?:must|shall|have\s+to|has\s+to|need\s+to|required\s+to)\s+(?:pay|deposit|transfer|send|submit|wire|remit|provide)\b/i,
-  /\b(?:pay|deposit|transfer|send|submit|remit)\s+(?:a|an|the|this|any)?\s*(?:registration|application|processing|security|training|laptop|equipment|kit|interview|slot|courier)?\s*(?:fee|deposit|charge|charges|cost)/i,
+  /\b(?:pay|deposit|transfer|send|submit|remit)\s+(?:a|an|the|this|any)?\s*(?:refundable|non[\s-]?refundable|nominal)?\s*(?:registration|application|processing|security|training|laptop|equipment|kit|interview|slot|courier)?\s*(?:fee|deposit|charge|charges|cost)/i,
   /\b(?:candidates?|applicants?|new\s+hires?|selected\s+candidates?)\s+(?:must|shall|need\s+to|have\s+to|has\s+to|are\s+required\s+to)\s+(?:pay|deposit|transfer|send|submit|bear)/i,
   /\bpay(?:ment)?\s+(?:is\s+)?(?:mandatory|compulsory|required)\b/i,
   /\b(?:mandatory|compulsory|required|payable|applicable|to\s+be\s+paid)\b/i,
@@ -52,7 +54,8 @@ const DEMAND_INDICATOR_PATTERNS = [
   /\b\d+\s*(?:rs|inr|rupees|dollars|bucks)\b/i,
   /\b(?:fee|deposit|charge|charges|cost)\s*(?:of|is|:)\s*(?:rs\.?|inr|₹|\$)?\s*\d+/i,
   /\b(?:prior\s+to|before)\s+(?:the\s+)?(?:first\s+day|offer|onboarding|dispatch|joining|starting|interview|receiving)/i,
-  /\b(?:before|to)\s+receive\s+(?:the\s+)?(?:offer|kit|laptop|letter)/i,
+  /\b(?:before|to)\s+(?:receive|unlock|start)\s+(?:the\s+)?(?:offer|kit|laptop|letter|job|work|tasks?)/i,
+  /\bto\s+unlock\s+(?:the\s+)?(?:job|work|tasks?|assignments?)\b/i,
   /\b(?:for|to\s+receive|to\s+dispatch)\s+(?:the\s+)?(?:typing\s+software|software\s+kit|onboarding\s+kit|kit|laptop)\b/i
 ];
 

@@ -395,4 +395,39 @@ describe('Rule Engine & Analysis Service Integration', () => {
     assert.ok(result.summary.disclaimer);
     assert.equal(result.summary.percentage, undefined); // Ensure NO arbitrary AI scam percentage
   });
+
+  it('should assess upfront-payment work-from-home listing as HIGH_RISK with detected indicators', async () => {
+    const payload = {
+      companyName: 'BrightFuture Online Jobs',
+      jobTitle: 'Work-from-Home Data Entry',
+      location: 'Remote',
+      salary: '₹80,000 per month',
+      jobDescription: 'Guaranteed income of ₹80,000 per month. No experience required. Immediate selection without an interview. Pay a refundable registration fee of ₹1,999 to unlock the job.'
+    };
+
+    const result = await analyzeJobListing(payload, { enableWebSearch: false });
+
+    assert.equal(result.summary.assessment, 'HIGH_RISK');
+    assert.ok(result.summary.indicatorCounts.critical >= 1, 'Expected at least 1 critical indicator');
+    assert.ok(result.warningIndicators.some((i) => i.id === 'UPFRONT_PAYMENT_FEE'), 'Expected UPFRONT_PAYMENT_FEE');
+    assert.ok(result.warningIndicators.some((i) => i.id === 'EMPLOYMENT_PAYMENT_REQUIRED'), 'Expected EMPLOYMENT_PAYMENT_REQUIRED');
+    assert.ok(result.warningIndicators.some((i) => i.id === 'UNREALISTIC_COMPENSATION'), 'Expected UNREALISTIC_COMPENSATION');
+    assert.ok(result.warningIndicators.some((i) => i.id === 'URGENT_UNVERIFIED_OFFER'), 'Expected URGENT_UNVERIFIED_OFFER');
+  });
+
+  it('should not mark a normal job description without suspicious indicators as HIGH_RISK', async () => {
+    const payload = {
+      companyName: 'Modern Logistics Solutions',
+      jobTitle: 'Data Entry Associate',
+      location: 'Remote',
+      salary: '₹22,000 per month',
+      jobDescription: 'We are seeking an attentive Data Entry Associate to input and audit warehouse inventory records. Candidates should possess strong spreadsheet skills and high attention to detail. Evaluation includes a technical typing test followed by a manager interview.'
+    };
+
+    const result = await analyzeJobListing(payload, { enableWebSearch: false });
+
+    assert.equal(result.summary.assessment, 'LOW_RISK');
+    assert.equal(result.summary.indicatorCounts.critical, 0);
+    assert.equal(result.summary.indicatorCounts.high, 0);
+  });
 });

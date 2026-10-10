@@ -8,9 +8,10 @@ const { SEVERITY, INDICATOR_TYPES } = require('../constants');
 const { findMatchesWithContext } = require('../textMatcher');
 
 const GUARANTEED_SELECTION_PATTERNS = [
-  { pattern: /\b(?:direct|instant)\s+(?:joining|selection|hiring)\s+(?:without\s+any?\s+)?(?:interview|test|exam)\b/gi, label: 'direct joining without interview' },
-  { pattern: /\b(?:100%|guaranteed)\s+(?:selection|job|placement|hiring)\b/gi, label: '100% selection guaranteed' },
-  { pattern: /\b(?:no\s+interview\s+(?:required|needed|conducted)|without\s+interview)\b/gi, label: 'no interview needed' },
+  { pattern: /\b(?:direct|instant|immediate)\s+(?:joining|selection|hiring|appointment)\s+(?:without\s+(?:an?\s+|any\s+)?)?(?:interview|test|exam|assessment)\b/gi, label: 'direct/immediate joining without interview' },
+  { pattern: /\b(?:100%|guaranteed)\s+(?:selection|job|placement|hiring|income|earnings?|salary|payout)\b/gi, label: 'guaranteed selection or income' },
+  { pattern: /\b(?:no\s+interview\s+(?:required|needed|conducted)|without\s+(?:an?\s+|any\s+)?interview)\b/gi, label: 'no interview needed' },
+  { pattern: /\bimmediate\s+selection\b/gi, label: 'immediate selection claim' },
   { pattern: /\b(?:immediate|direct)\s+appointment\s+letter\s+(?:within|in)\s+\d+\s*(?:hours?|hrs?|minutes?|mins?)\b/gi, label: 'instant appointment letter' },
   { pattern: /\b(?:only\s+\d+\s+seats?\s+left|limited\s+slots?\s+remaining)[^.]{1,50}(?:hurry|apply\s+fast|pay\s+now)\b/gi, label: 'manufactured scarcity urgency' }
 ];

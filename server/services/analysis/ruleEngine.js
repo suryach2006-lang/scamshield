@@ -132,7 +132,7 @@ class RuleEngine {
     };
 
     indicators.forEach((ind) => {
-      const sev = ind.severity ? ind.severity.toLowerCase() : 'low';
+      const sev = ind && ind.severity ? String(ind.severity).trim().toLowerCase() : 'low';
       if (counts[sev] !== undefined) {
         counts[sev] += 1;
       }
@@ -142,7 +142,8 @@ class RuleEngine {
       !normalizedInput.jobTitle &&
       !normalizedInput.companyName &&
       !normalizedInput.jobDescription &&
-      !normalizedInput.jobUrl;
+      !normalizedInput.jobUrl &&
+      !(normalizedInput.recruiterContact && normalizedInput.recruiterContact.raw);
 
     let assessment = ASSESSMENT.LOW_RISK;
     let headline = 'No prominent warning indicators were identified based on the provided inputs.';

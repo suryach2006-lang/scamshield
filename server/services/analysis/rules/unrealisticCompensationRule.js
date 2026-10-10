@@ -12,8 +12,10 @@ const UNREALISTIC_PAY_PATTERNS = [
   { pattern: /\b(?:daily\s+income|daily\s+earning|daily\s+payout)\s*(?:of\s+)?(?:rs\.?|inr|₹|\$)?\s*[0-9,]{4,}/gi, label: 'daily payout claim' },
   { pattern: /\b(?:earn|make)\s+[0-9,]{4,}\s*(?:to|-)\s*[0-9,]{4,}\s*(?:daily|per\s+day)/gi, label: 'daily earning range' },
   { pattern: /\bwork\s+(?:only\s+)?(?:1|2|1-2|half)\s*(?:hour|hr)s?\s*(?:a\s+day|daily)?\s*(?:and|to)\s*earn\b/gi, label: 'minimal hours high earnings' },
-  { pattern: /\b(?:guaranteed|instant)\s+daily\s+(?:payout|income|salary|cash)\b/gi, label: 'guaranteed daily cash' },
-  { pattern: /\b(?:no\s+experience|no\s+skills?|no\s+qualification)\s+(?:needed|required)[^.]{1,60}(?:₹|\$|rs\.?)\s*[0-9,]{5,}/gi, label: 'high pay zero experience' }
+  { pattern: /\b(?:guaranteed|instant)\s+(?:daily\s+|monthly\s+|weekly\s+)?(?:payout|income|salary|cash|earnings?)\b/gi, label: 'guaranteed payout or income' },
+  { pattern: /\b(?:no\s+experience|no\s+skills?|no\s+qualification)\s+(?:needed|required)[^.]{1,60}(?:₹|\$|rs\.?)\s*[0-9,]{5,}/gi, label: 'high pay zero experience' },
+  { pattern: /(?:₹|\$|rs\.?)\s*[0-9,]{4,}[^.]{0,60}(?:no\s+experience|no\s+skills?|no\s+qualification)\s+(?:needed|required)/gi, label: 'high pay zero experience' },
+  { pattern: /\b(?:guaranteed\s+)?income\s+(?:of\s+)?(?:rs\.?|inr|₹|\$)?\s*[0-9,]{4,}[^.]{0,60}(?:no\s+experience|no\s+skills?|no\s+qualification)/gi, label: 'guaranteed income with zero experience' }
 ];
 
 // Low skill roles that scam campaigns frequently target with fake high compensation

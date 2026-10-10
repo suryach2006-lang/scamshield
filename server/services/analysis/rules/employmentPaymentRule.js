@@ -8,9 +8,11 @@ const { SEVERITY, INDICATOR_TYPES } = require('../constants');
 const { findMatchesWithContext } = require('../textMatcher');
 
 const EMPLOYMENT_PAYMENT_PATTERNS = [
-  { pattern: /\b(?:pay|deposit)\s+(?:money\s+)?(?:to\s+start|before\s+starting|to\s+begin)\s+(?:work|job|tasks?)\b/gi, label: 'pay to start work' },
+  { pattern: /\b(?:pay|deposit)\s+(?:money\s+)?(?:to\s+start|before\s+starting|to\s+begin|to\s+unlock)\s+(?:the\s+)?(?:work|job|tasks?)\b/gi, label: 'pay to start or unlock work' },
   { pattern: /\b(?:initial|small|minimum)\s+investment\s+(?:required|needed|of)\b/gi, label: 'investment required for job' },
   { pattern: /\b(?:recharge|top[\s-]?up|deposit\s+funds\s+into)\s+(?:your\s+)?(?:account|wallet|balance)\s+(?:to\s+unlock|to\s+receive|to\s+start)\b/gi, label: 'wallet recharge to unlock tasks' },
+  { pattern: /\b(?:pay|deposit|transfer|fee|charge)\b[^.]{0,50}\b(?:to\s+unlock|before\s+unlocking)\s+(?:the\s+)?(?:job|work|tasks?|assignments?)\b/gi, label: 'pay to unlock job' },
+  { pattern: /\bto\s+unlock\s+(?:the\s+)?(?:job|work|tasks?|assignments?)\b/gi, label: 'unlock job requirement' },
   { pattern: /\bprepaid\s+task(?:s)?\b/gi, label: 'prepaid task requirement' },
   { pattern: /\b(?:pay|transfer|deposit)\s+(?:amount|fee|money)\s+(?:to\s+get|to\s+release|for\s+the)\s+(?:offer\s+letter|appointment\s+letter|contract)\b/gi, label: 'payment for offer letter' },
   { pattern: /\bearn\s+(?:high\s+)?commission\s+(?:by|after|upon)\s+(?:depositing|investing|recharging)\b/gi, label: 'commission upon deposit' }
