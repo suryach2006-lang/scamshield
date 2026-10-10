@@ -291,6 +291,126 @@ const verifyCandidateDomain = (candidateDomain, companyName, entityTitle = null)
 };
 
 /**
+ * Safely escapes special regular expression characters in a string.
+ * @param {string} str
+ * @returns {string}
+ */
+const escapeRegExp = (str) => {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
+/**
+ * Checks whether text specifically mentions or refers to the claimed company name,
+ * avoiding accidental matching of generic corporate stopwords or substring collisions.
+ *
+ * @param {string} text - Text to inspect (e.g. title + snippet)
+ * @param {string} companyName - Claimed employer name
+ * @returns {boolean}
+ */
+const refersToCompany = (text, companyName) => {
+  if (!text || !companyName || typeof text !== 'string' || typeof companyName !== 'string') {
+    return false;
+  }
+
+  const trimmedCompany = companyName.trim();
+  if (trimmedCompany.length < 2) return false;
+
+  // 1. Direct whole-phrase match with word boundaries if length >= 3
+  if (trimmedCompany.length >= 3) {
+    const directRegex = new RegExp(`\\b${escapeRegExp(trimmedCompany)}\\b`, 'i');
+    if (directRegex.test(text)) return true;
+  }
+
+  // 2. Meaningful tokens match (tokens without corporate stopwords like Ltd, Inc)
+  const tokens = extractCompanyTokens(companyName);
+  if (tokens.length === 0) return false;
+
+  // Multi-word company: check combined meaningful phrase or concatenated form
+  if (tokens.length >= 2) {
+    const phrase = tokens.join(' ');
+    if (new RegExp(`\\b${escapeRegExp(phrase)}\\b`, 'i').test(text)) {
+      return true;
+    }
+    const concat = tokens.join('');
+    if (concat.length >= 4 && new RegExp(`\\b${escapeRegExp(concat)}\\b`, 'i').test(text)) {
+      return true;
+    }
+    // Check acronym if derived from >= 2 words and length >= 3 (e.g. TCS)
+    const rawWords = String(companyName)
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean);
+    if (rawWords.length >= 2) {
+      const acronym = rawWords.map((w) => w[0]).join('');
+      if (acronym.length >= 3 && new RegExp(`\\b${escapeRegExp(acronym)}\\b`, 'i').test(text)) {
+        return true;
+      }
+    }
+  }
+
+  // Single meaningful token: require word boundaries and length >= 3 (e.g. \bInfosys\b)
+  const primaryToken = tokens[0];
+  if (primaryToken && primaryToken.length >= 3) {
+    const wordRegex = new RegExp(`\\b${escapeRegExp(primaryToken)}\\b`, 'i');
+    if (wordRegex.test(text)) return true;
+  }
+
+  return false;
+};
+
+/**
+ * Evaluates whether a news article title and snippet describe recruitment-related
+ * fraud, fake job offers, recruitment fee scams, or employer impersonation.
+ * Conservative classification: ignores unrelated corporate fraud, tax cases, or general criminal news.
+ *
+ * @param {Object} article - Normalized news article
+ * @param {string} companyName - Claimed employer name
+ * @returns {boolean}
+ */
+const isRecruitmentScamAlert = (article, companyName) => {
+  if (!article || !companyName) return false;
+
+  const title = article.title || '';
+  const snippet = article.snippet || '';
+  const fullText = `${title} ${snippet}`;
+
+  // 1. Must specifically refer to the claimed company/employer
+  if (!refersToCompany(fullText, companyName)) {
+    return false;
+  }
+
+  // 2. Must describe explicit recruitment fraud, fake job offers, or employer impersonation
+  const recruitmentFraudPatterns = [
+    // Fake job offers, appointment letters, or interviews
+    /\b(?:fake|fraudulent|bogus|counterfeit|forged|phony)\s+(?:jobs?|offer\s+letters?|appointment\s+letters?|employment|recruitment|interviews?|call\s+letters?)\b/i,
+    /\b(?:job|offer|appointment)\s+(?:scams?|rackets?|frauds?|forgery)\b/i,
+
+    // Recruitment / hiring / job racket, scam syndicate, or gang
+    /\b(?:recruitment|hiring|employment|job|placement)\s+(?:rackets?|scams?|frauds?|syndicates?|rings?|gangs?)\b/i,
+
+    // Impersonation of recruiters, HR, or the company for employment
+    /\b(?:impersonat\w*|posing\s+as|pretending\s+to\s+be)\s+.*?(?:recruiters?|hr|talent|interviewers?|officials?|employers?)\b/i,
+    /\b(?:impersonat\w*|posing\s+as|pretending\s+to\s+be)\s+.*?(?:jobs?|recruitment|hiring|offers?|employment)\b/i,
+    /\b(?:scammers?|fraudsters?)\s+(?:impersonat\w*|pose\s+as|posing\s+as)\b/i,
+
+    // Recruitment, registration, or interview fee demands
+    /\b(?:recruitment|interview|registration|training|kit|application|placement)\s+fees?\b/i,
+    /\b(?:demanded|demanding|charged|charging|collected|collecting|extorted)\s+.*?(?:money|fees?|cash)\s+.*?(?:for\s+(?:jobs?|offers?|employment)|promising\s+jobs?)\b/i,
+
+    // Job seekers, candidates, or aspirants duped or cheated
+    /\b(?:job\s*seekers?|candidates?|aspirants?|graduates?|unemployed)\s+(?:duped|cheated|scammed|defrauded|swindled|fleeced)\b/i,
+    /\b(?:duped|cheated|scammed|defrauded)\s+.*?(?:promising\s+jobs?|with\s+fake\s+(?:jobs?|offers?|appointments?)|for\s+jobs?)\b/i,
+
+    // Official employer warning / advisory regarding fake recruitment
+    /\b(?:cautions?|warns?|alerted?|warning|advisory)\s+.*?(?:fake\s+jobs?|job\s+scams?|recruitment\s+fraud|recruitment\s+scams?|fake\s+offers?|fake\s+appointments?)\b/i,
+    /\bnever\s+(?:charges?|demands?)\s+(?:any\s+)?(?:fees?|money)\s+(?:for\s+recruitment|for\s+employment|for\s+jobs?)\b/i
+  ];
+
+  return recruitmentFraudPatterns.some((pattern) => pattern.test(fullText));
+};
+
+/**
  * Gathers and normalizes SerpApi evidence across Web, Google Jobs, and Google News.
  * Strictly limits requests to at most 3 targeted searches per analysis.
  *
@@ -540,10 +660,10 @@ const gatherSerpApiEvidence = async (normalizedInput, options = {}) => {
         snippet: article.snippet
       }));
 
-      // Filter for articles that explicitly contain fraud/scam warning terms
-      const scamFilter = /\b(?:scam|fraud|fake\s+job|fake\s+offer|arrested|duped|racket|cybercrime|cheated|caution)\b/i;
-      const flagged = normalizedArticles.filter(
-        (a) => scamFilter.test(a.title) || scamFilter.test(a.snippet)
+      // Evaluate news articles conservatively for explicit recruitment fraud or employer impersonation
+      const companyName = (normalizedInput.companyName || '').trim();
+      const flagged = normalizedArticles.filter((article) =>
+        isRecruitmentScamAlert(article, companyName)
       );
 
       baseResult.newsEvidence.status = 'COMPLETED';
@@ -552,16 +672,17 @@ const gatherSerpApiEvidence = async (normalizedInput, options = {}) => {
       baseResult.newsEvidence.flaggedAlerts = flagged;
       baseResult.newsEvidence.alertsFound = flagged.length > 0;
 
-      // If legitimate news reports of recruitment fraud or impersonation exist
-      if (flagged.length > 0 && normalizedInput.companyName) {
+      // When relevant reports of recruitment fraud or employer impersonation exist,
+      // emit a contextual advisory rather than asserting that the user's specific listing is fraudulent.
+      if (flagged.length > 0 && companyName) {
         const topAlert = flagged[0];
         baseResult.additionalIndicators.push({
           id: 'PUBLIC_NEWS_SCAM_REPORT',
           type: INDICATOR_TYPES.IDENTITY_VERIFICATION,
-          severity: SEVERITY.HIGH,
-          title: 'Public News Reports of Recruitment Fraud or Impersonation',
+          severity: SEVERITY.LOW,
+          title: 'Public Advisory: Recruitment Scam or Impersonation Reports',
           explanation:
-            `Verified news publications have reported recruitment fraud, fake appointment letters, or impersonation schemes referencing "${normalizedInput.companyName}".`,
+            `Public news reports describe recruitment fraud or scammers impersonating "${companyName}" (such as fake offer letters or recruitment fees). This serves as a contextual advisory regarding known scam patterns; it does not establish that the submitted listing is fake or illegitimate. Independently verify offers via official employer channels.`,
           evidence: {
             source: 'serpapi.google_news',
             query: newsQuery,
@@ -616,5 +737,7 @@ module.exports = {
   gatherSerpApiEvidence,
   buildQueries,
   extractDomain,
-  verifyCandidateDomain
+  verifyCandidateDomain,
+  isRecruitmentScamAlert,
+  refersToCompany
 };

@@ -9,7 +9,9 @@ const {
   buildQueries,
   extractDomain,
   gatherSerpApiEvidence,
-  verifyCandidateDomain
+  verifyCandidateDomain,
+  isRecruitmentScamAlert,
+  refersToCompany
 } = require('../services/analysis/serpApiIntelligenceService');
 const { normalizeInput } = require('../services/analysis/normalizer');
 const serpApiService = require('../services/serpApiService');
@@ -287,5 +289,197 @@ describe('Corporate Domain Verification & Recruiter Mismatch Regression', () => 
     // google.com in Knowledge Graph should be rejected
     assert.equal(result.webEvidence.officialDomain, null);
     assert.equal(result.additionalIndicators.some((i) => i.id === 'VERIFIED_DOMAIN_MISMATCH'), false);
+  });
+});
+
+describe('Google News Intelligence & False-Positive Prevention', () => {
+  let originalSearchGoogle;
+  let originalSearchJobs;
+  let originalSearchNews;
+  let originalApiKey;
+
+  beforeEach(() => {
+    originalSearchGoogle = serpApiService.searchGoogle;
+    originalSearchJobs = serpApiService.searchJobs;
+    originalSearchNews = serpApiService.searchNews;
+    originalApiKey = process.env.SERPAPI_KEY;
+    process.env.SERPAPI_KEY = 'test_mock_serpapi_key';
+
+    serpApiService.searchGoogle = async () => ({ results: [], knowledgeGraph: null });
+    serpApiService.searchJobs = async () => ({ jobs: [] });
+  });
+
+  afterEach(() => {
+    serpApiService.searchGoogle = originalSearchGoogle;
+    serpApiService.searchJobs = originalSearchJobs;
+    serpApiService.searchNews = originalSearchNews;
+    if (originalApiKey !== undefined) {
+      process.env.SERPAPI_KEY = originalApiKey;
+    } else {
+      delete process.env.SERPAPI_KEY;
+    }
+  });
+
+  it('should not automatically create a HIGH-severity listing-specific indicator for articles about scammers impersonating the company', async () => {
+    serpApiService.searchNews = async () => ({
+      news: [
+        {
+          title: 'Scammers Impersonating Infosys in Phishing Campaign',
+          snippet: 'Cyber security advisory alerts job applicants that fraudsters are impersonating Infosys recruiters on Telegram to solicit personal data.',
+          source: 'Cyber Threat Digest',
+          link: 'https://news.example.com/impersonation-advisory'
+        }
+      ]
+    });
+
+    const input = normalizeInput({
+      companyName: 'Infosys Limited',
+      jobTitle: 'Senior Systems Engineer'
+    });
+
+    const result = await gatherSerpApiEvidence(input, { enabled: true });
+
+    // Articles should be preserved in newsEvidence
+    assert.equal(result.newsEvidence.articles.length, 1);
+
+    // Must NOT create a HIGH-severity indicator
+    const highIndicators = result.additionalIndicators.filter((i) => i.severity === 'HIGH');
+    assert.equal(highIndicators.length, 0, 'Must not produce any HIGH-severity listing-specific indicators');
+
+    // If an advisory indicator is emitted, it must be LOW severity and provide contextual guidance
+    const newsIndicator = result.additionalIndicators.find((i) => i.id === 'PUBLIC_NEWS_SCAM_REPORT');
+    if (newsIndicator) {
+      assert.equal(newsIndicator.severity, 'LOW');
+      assert.equal(/is fraudulent/i.test(newsIndicator.explanation), false);
+      assert.equal(/verified news publications/i.test(newsIndicator.explanation), false);
+    }
+  });
+
+  it('should not create a recruitment-scam indicator for an unrelated corporate fraud case', async () => {
+    serpApiService.searchNews = async () => ({
+      news: [
+        {
+          title: 'Infosys GST billing fraud under investigation by tax department',
+          snippet: 'Authorities are probing alleged supplier invoice irregularities and tax credit fraud of ₹100 crore involving third-party vendors.',
+          source: 'National Business Review',
+          link: 'https://news.example.com/gst-probe'
+        }
+      ]
+    });
+
+    const input = normalizeInput({
+      companyName: 'Infosys Limited',
+      jobTitle: 'Software Engineer'
+    });
+
+    const result = await gatherSerpApiEvidence(input, { enabled: true });
+
+    // Article is retained as contextual news
+    assert.equal(result.newsEvidence.articles.length, 1);
+
+    // Must NOT be flagged as a recruitment scam alert
+    assert.equal(result.newsEvidence.alertsFound, false);
+    assert.equal(result.newsEvidence.flaggedAlerts.length, 0);
+
+    // Must not emit any recruitment scam indicator
+    assert.equal(result.additionalIndicators.some((i) => i.id === 'PUBLIC_NEWS_SCAM_REPORT'), false);
+  });
+
+  it('should produce a contextual warning for fake job offers or recruitment fees without asserting the listing is fraudulent', async () => {
+    serpApiService.searchNews = async () => ({
+      news: [
+        {
+          title: 'Fake Infosys Job Offer Letter Racket Busted, 4 Arrested',
+          snippet: 'Police arrested a cyber gang that duped job aspirants by issuing counterfeit appointment letters and charging ₹25,000 registration fees.',
+          source: 'City Press',
+          link: 'https://news.example.com/job-racket-arrests'
+        }
+      ]
+    });
+
+    const input = normalizeInput({
+      companyName: 'Infosys Limited',
+      jobTitle: 'Senior Software Engineer'
+    });
+
+    const result = await gatherSerpApiEvidence(input, { enabled: true });
+
+    assert.equal(result.newsEvidence.alertsFound, true);
+    assert.equal(result.newsEvidence.flaggedAlerts.length, 1);
+
+    const indicator = result.additionalIndicators.find((i) => i.id === 'PUBLIC_NEWS_SCAM_REPORT');
+    assert.ok(indicator, 'Expected contextual warning indicator for explicit recruitment scam report');
+
+    // Must NOT be HIGH severity
+    assert.notEqual(indicator.severity, 'HIGH');
+    assert.equal(indicator.severity, 'LOW');
+
+    // Accurate risk language: must NOT assert that the user listing is fraudulent
+    assert.equal(/is fraudulent/i.test(indicator.explanation), false);
+    assert.equal(/verified news publications/i.test(indicator.explanation), false);
+    assert.ok(indicator.explanation.includes('contextual advisory'));
+
+    // Preserves evidence details
+    assert.equal(indicator.evidence.articleTitle, 'Fake Infosys Job Offer Letter Racket Busted, 4 Arrested');
+    assert.equal(indicator.evidence.publisher, 'City Press');
+    assert.equal(indicator.evidence.sourceUrl, 'https://news.example.com/job-racket-arrests');
+    assert.ok(indicator.evidence.snippet.includes('counterfeit appointment letters'));
+  });
+
+  it('should not trigger a recruitment-scam warning when news mentions "fraud" without relevant recruitment evidence', async () => {
+    serpApiService.searchNews = async () => ({
+      news: [
+        {
+          title: 'Former Infosys employee involved in real estate fraud case',
+          snippet: 'Police arrested three individuals accused of defrauding property buyers in a land transaction scam.',
+          source: 'Metropolitan Daily',
+          link: 'https://news.example.com/land-transaction-fraud'
+        }
+      ]
+    });
+
+    const input = normalizeInput({
+      companyName: 'Infosys Limited',
+      jobTitle: 'Lead Developer'
+    });
+
+    const result = await gatherSerpApiEvidence(input, { enabled: true });
+
+    // Article kept in articles collection
+    assert.equal(result.newsEvidence.articles.length, 1);
+
+    // No recruitment scam warning triggered
+    assert.equal(result.newsEvidence.alertsFound, false);
+    assert.equal(result.newsEvidence.flaggedAlerts.length, 0);
+    assert.equal(result.additionalIndicators.some((i) => i.id === 'PUBLIC_NEWS_SCAM_REPORT'), false);
+  });
+
+  it('should handle empty news results and news search failures gracefully', async () => {
+    // Empty news results
+    serpApiService.searchNews = async () => ({ news: [] });
+
+    const input = normalizeInput({
+      companyName: 'Infosys Limited',
+      jobTitle: 'Developer'
+    });
+
+    const emptyResult = await gatherSerpApiEvidence(input, { enabled: true });
+    assert.equal(emptyResult.newsEvidence.status, 'COMPLETED');
+    assert.equal(emptyResult.newsEvidence.resultCount, 0);
+    assert.equal(emptyResult.newsEvidence.articles.length, 0);
+    assert.equal(emptyResult.newsEvidence.flaggedAlerts.length, 0);
+    assert.equal(emptyResult.newsEvidence.alertsFound, false);
+    assert.equal(emptyResult.additionalIndicators.some((i) => i.id === 'PUBLIC_NEWS_SCAM_REPORT'), false);
+
+    // News search failure
+    serpApiService.searchNews = async () => {
+      throw new Error('SerpApi rate limit or network timeout');
+    };
+
+    const errorResult = await gatherSerpApiEvidence(input, { enabled: true });
+    assert.equal(errorResult.newsEvidence.status, 'ERROR');
+    assert.equal(errorResult.newsEvidence.error, 'News search could not be completed.');
+    assert.equal(errorResult.newsEvidence.alertsFound, false);
+    assert.equal(errorResult.additionalIndicators.some((i) => i.id === 'PUBLIC_NEWS_SCAM_REPORT'), false);
   });
 });

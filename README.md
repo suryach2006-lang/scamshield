@@ -1,185 +1,216 @@
 # ScamShield
 
-> **Verify before you trust.**
+> **Evidence-Based Job Listing & Recruitment Fraud Intelligence Platform**  
+> Built for the **SerpApi India Hackathon 2026**
 
-ScamShield is an evidence-based recruitment and job offer intelligence platform built for the **SerpApi India Hackathon 2026**. It investigates job postings, verifies corporate identity via live SerpApi search intelligence across Google Web, Google Jobs, and Google News, and surfaces objective, rule-based warning indicators to protect job seekers from employment fraud.
-
----
-
-## 1. Problem
-
-Recruitment fraud, task-based scams, brand impersonation, and advance-fee schemes have grown rapidly across India and worldwide:
-
-- Fraudulent operators lure job seekers via Telegram, WhatsApp, social media, and spoofed portals with promises of simple data entry, video liking, or review rating for exorbitant daily payouts.
-- Victims are coerced into paying upfront "registration fees," "training deposits," or "wallet top-ups" before work begins, or tricked into revealing banking credentials and OTPs.
-- Existing anti-scam tools either rely on opaque "AI scam percentages" prone to hallucination or lack live third-party corroboration to distinguish authentic corporate entities from impersonators.
+ScamShield protects job seekers from employment fraud, task-based scams, brand impersonation, and advance-fee schemes. It analyzes job listing attributes against 10 deterministic threat detection rules and cross-corroborates corporate authenticity in real time using multi-engine search intelligence from **SerpApi** (Google Web, Google Jobs, and Google News).
 
 ---
 
-## 2. Solution
+## Table of Contents
 
-ScamShield solves this problem by combining **deterministic recruitment fraud heuristics** with **real-time search intelligence powered by SerpApi**:
-
-- **Evidence-Based Risk Indicators:** Evaluates listing claims against 10 strict threat rules (e.g., upfront fees, suspicious communication channels, domain mismatches, guaranteed selection).
-- **Live Search Corroboration:** Cross-references the employer's stated identity across Google Web, Google Jobs, and Google News.
-- **Objective Transparency:** ScamShield **does not guarantee that a listing is fraudulent**, nor does it generate arbitrary synthetic scam percentages. Instead, it provides actionable evidence, matched source quotes, verified corporate markers, and missing authenticity signals so candidates can make informed decisions.
+1. [Project Overview](#1-project-overview)
+2. [Problem Statement & Solution](#2-problem-statement--solution)
+3. [Key Features](#3-key-features)
+4. [How It Works (Workflow Pipeline)](#4-how-it-works-workflow-pipeline)
+5. [Technology Stack](#5-technology-stack)
+6. [Architecture](#6-architecture)
+7. [Prerequisites](#7-prerequisites)
+8. [Installation & Local Setup](#8-installation--local-setup)
+9. [Environment Configuration](#9-environment-configuration)
+10. [Environment Example](#10-environment-example)
+11. [API Documentation](#11-api-documentation)
+12. [Database & Scan History Persistence](#12-database--scan-history-persistence)
+13. [Testing](#13-testing)
+14. [Troubleshooting Guide](#14-troubleshooting-guide)
+15. [Limitations & Responsible Use](#15-limitations--responsible-use)
+16. [Hackathon Demo & Evaluation Checklist](#16-hackathon-demo--evaluation-checklist)
+17. [License & Credits](#17-license--credits)
 
 ---
 
-## 3. How ScamShield Works
+## 1. Project Overview
 
-The application operates as a 3-stage intelligence pipeline:
+**ScamShield** is an evidence-first recruitment fraud analyzer. Rather than returning opaque "AI probability percentages" that hallucinate or mislead candidates, ScamShield produces objective, explainable assessments backed by:
+- **Direct quote extraction** of predatory phrases (fees, task recharges, credentials requests).
+- **Live Google Search verification** via SerpApi to confirm registered corporate domains and official Knowledge Graph profiles.
+- **Active job board corroboration** via Google Jobs to verify whether the employer actively hires for the stated role.
+- **Advisory and news monitoring** via Google News to check for known impersonation rackets, cybercrime police FIRs, or recruitment warnings.
+- **Persistent historical records** backed by MongoDB Atlas with a zero-crash in-memory fallback.
+
+---
+
+## 2. Problem Statement & Solution
+
+### The Problem
+Recruitment scams have evolved into an industrial-scale cybercrime operation across India and globally:
+- **Advance-Fee Fraud:** Unsuspecting applicants are promised data-entry or work-from-home roles and coerced into paying "registration charges," "training fees," or "security deposits" before receiving offer letters.
+- **Task & Prepaid Recharges:** Victims are lured into Telegram/WhatsApp groups with promises of quick daily commissions for liking YouTube videos or writing Google reviews, only to lose significant funds to fake "recharge wallets."
+- **Brand Impersonation:** Scammers spoof recognizable enterprises (e.g., TCS, Wipro, Infosys) using lookalike domains (e.g., `wipro-portal.xyz`), free webmail addresses (`recruitment-wipro@gmail.com`), or messaging channels.
+- **Lack of Corroboration:** Existing consumer tools either lack real-time web verification or rely on black-box LLM scoring that cannot cite primary sources.
+
+### The Solution
+ScamShield provides an objective, two-pronged analysis:
+1. **Rule-Based Threat Heuristics:** Evaluates listings against 10 deterministic rules built specifically for employment fraud markers.
+2. **Real-Time SerpApi Grounding:** Queries Google Web, Jobs, and News to establish whether the claimed company exists, operates an authenticated corporate domain, actively hires for the position, or is the subject of public fraud advisories.
+3. **Transparent Reporting:** Highlights confirmed authentication markers vs. missing signals, provides actionable safety advice, and saves report records for post-investigation review.
+
+---
+
+## 3. Key Features
+
+All features listed below are verified in the active codebase:
+
+- **Comprehensive Listing Input:** Ingests company name, job title, job URL, salary, location, recruiter contacts, and job descriptions.
+- **1-Click Evaluation Presets:** Instant loading of realistic testing scenarios directly in the UI:
+  - *Advance-Fee Scam:* Typing operator role demanding ₹1,500 registration deposit via Telegram.
+  - *Task/Impersonation Scam:* Claimed Wipro role directing to `.xyz` domain demanding task wallet recharges.
+  - *Authentic Enterprise Opening:* Senior Cloud Solutions Architect opening at Tata Consultancy Services (`tcs.com`).
+- **Interactive 5-Stage Analyzing Screen:** Smooth visual milestone indicator tracking active search and heuristic evaluation steps.
+- **10 Deterministic Threat Detection Rules:**
+  1. `upfrontPaymentRule`: Identifies mandatory registration fees, kit charges, or training deposits while preserving legitimate non-fee corporate disclaimers.
+  2. `employmentPaymentRule`: Flags requirements to pay money, purchase packages, or top-up wallets to unlock work.
+  3. `sensitiveFinancialRule`: Flags demands for net banking credentials, OTPs, ATM PINs, blank cheques, or remote desktop software (AnyDesk, TeamViewer).
+  4. `unrealisticCompensationRule`: Flags unrealistic compensation models (e.g., ₹6,000–₹8,000/day for basic copy-paste tasks).
+  5. `contactChannelRule`: Flags recruitment conducted exclusively over Telegram, WhatsApp, or through public free webmail (`@gmail.com`, `@yahoo.com`).
+  6. `domainMismatchRule`: Identifies discrepancies between the recruiter's domain and the company's verified corporate domain; rejects lookalike domains.
+  7. `urgencyGuaranteedRule`: Detects guaranteed selection without interview and artificial high-pressure hiring deadlines.
+  8. `taskScamRule`: Flags commission schemes based on liking social media posts, rating maps, or prepaid task completion.
+  9. `suspiciousUrlRule`: Detects URL shorteners (`bit.ly`, `tinyurl.com`) concealing true destinations, direct chat invite links, and high-risk TLDs.
+  10. `missingVerificationRule`: Flags anonymous or vague employer identities (e.g., "Reputed MNC", "Top IT Firm").
+- **SerpApi Evidence Hub:** Expandable accordions displaying retrieved Google Web, Google Jobs, and Google News metadata and snippets.
+- **Verification Signals Audit:** Side-by-side comparison of confirmed corporate authenticity signals versus missing safety signals.
+- **MongoDB Persistence & History View:** Saves every scan to MongoDB Atlas with instant retrieval, search limits, and dedicated single-scan inspection.
+- **Zero-Crash In-Memory Fallback:** Seamlessly caches scans in application memory if MongoDB is offline, ensuring the app remains fully testable.
+- **Adaptive Dark / Light Theme:** Custom Vanilla CSS design token system with zero-flicker theme persistence via `localStorage`.
+
+---
+
+## 4. How It Works (Workflow Pipeline)
 
 ```
-[ Job Inspection Form ]
-         │
-         ▼  (User submits listing details or selects a 1-click preset)
-[ Dedicated Analyzing View ]
-         │  ├── Stage 1: Checking company web presence (Google Web)
-         │  ├── Stage 2: Searching Google Jobs (Active postings)
-         │  ├── Stage 3: Searching Google News (Fraud advisories)
-         │  ├── Stage 4: Collecting & normalising evidence
-         │  └── Stage 5: Evaluating 10 deterministic warning rules
-         ▼
-[ Dedicated Results View ]
-         ├── Executive Assessment Badge (High, Elevated, Moderate, Low, Info)
-         ├── Detected Warning Indicators with matched evidence quotes
-         ├── SerpApi Evidence Hub (Google Web, Jobs, News expandable drawers)
-         ├── Employer Verification Signals (Confirmed vs Missing audit)
-         └── Actionable Candidate Safety Recommendations
-         │
-         ▼  (Auto-saved to MongoDB / in-memory cache)
-[ Recent Scan History ]
-         └── Instantly reopen past reports without consuming SerpApi quota
-```
-
----
-
-## 4. SerpApi Integration
-
-ScamShield uses the official `serpapi` SDK on the Node.js backend. To optimize speed, accuracy, and quota usage, each analysis executes a strictly budgeted set of **3 targeted queries**:
-
-### 1. Google Web Search (`engine: "google"`)
-- **Query Format:** `"{companyName}" official site OR careers`
-- **Purpose:**
-  - Corroborates whether the company possesses an authenticated corporate domain.
-  - Extracts the **Google Knowledge Graph** entity profile (official website, business type, description) to verify legal identity.
-  - Discovers official career portals to contrast against candidate-provided application links.
-
-### 2. Google Jobs Search (`engine: "google_jobs"`)
-- **Query Format:** `"{jobTitle} {companyName}"` (appends location if provided)
-- **Purpose:**
-  - Determines whether the job opening is syndicated across legitimate job aggregators (e.g., LinkedIn, Indeed, Naukri, Monster).
-  - Verifies whether the stated employer actively hires for the specified title.
-  - Flags offers claiming to represent major enterprises when no corresponding postings exist across indexed boards.
-
-### 3. Google News Search (`engine: "google_news"`)
-- **Query Format:** `"{companyName}" (scam OR fraud OR fake OR fake offer OR arrest)`
-- **Purpose:**
-  - Scans for published cybercrime advisories, police FIR reports, impersonation warnings, or recruitment rackets mentioning the employer.
-  - Extracts article headlines, publishers, dates, and direct links to provide candidates with immediate third-party warning context.
-
-### Query Construction & Error Resilience
-- If the employer name is omitted or generic (e.g., "Reputed MNC"), ScamShield avoids wasteful searches and flags missing identity signals.
-- Zero search results are handled gracefully as "no records found" rather than false scam determinations.
-- SerpApi requests run securely server-side; credentials are never exposed to the client.
-
----
-
-## 5. Features
-
-- [x] **Inspection Input Form:** Inspects company name, job title, job URL, salary, location, recruiter contacts, and full job description.
-- [x] **1-Click Quick Demos:** Pre-configured test cases representing real-world scenarios:
-  - *Fee Scam:* Advance-fee typing job with Telegram recruiter and registration charges.
-  - *Spoof Scam:* Brand impersonation task scam using spoofed `.xyz` domain and wallet top-ups.
-  - *Legit Job:* Authentic enterprise cloud architect opening (Tata Consultancy Services).
-- [x] **Live 5-Stage Analyzing View:** Smooth horizontal progress tracker displaying active investigation milestones.
-- [x] **10 Deterministic Heuristic Rules:**
-  1. `upfrontPaymentRule`: Flags demands for registration fees, kit charges, or training deposits.
-  2. `employmentPaymentRule`: Flags paying money to unlock jobs or top-up task wallets.
-  3. `sensitiveFinancialRule`: Detects requests for net banking passwords, OTPs, ATM PINs, or blank cheques.
-  4. `unrealisticCompensationRule`: Identifies exorbitant daily income claims for basic roles.
-  5. `contactChannelRule`: Flags hiring conducted exclusively via Telegram/WhatsApp or free webmail.
-  6. `domainMismatchRule`: Detects discrepancies between recruiter email domain and verified corporate portal.
-  7. `urgencyGuaranteedRule`: Flags "direct joining without interview" and artificial hiring deadlines.
-  8. `taskScamRule`: Detects commission schemes for liking YouTube videos or rating Google maps.
-  9. `suspiciousUrlRule`: Identifies URL shorteners (`bit.ly`) or direct chat invite application links.
-  10. `missingVerificationRule`: Flags anonymous or generic employer identities.
-- [x] **Compact Evidence Hub:** Expandable detail drawers for Google Web, Google Jobs, and Google News source records.
-- [x] **Verification Signals Audit:** 2-column comparison of confirmed corporate authenticity signals vs. missing signals.
-- [x] **MongoDB Persistence:** Completed analyses are saved and viewable in **Recent Scan History**.
-- [x] **Offline Cache Fallback:** Operates transparently in local development even if MongoDB is not running locally.
-- [x] **Dark / Light Theme:** Custom CSS design token system with zero-flash localStorage theme persistence.
-- [x] **Responsive Design:** Optimized layout for desktop, tablet, and mobile viewports.
-
----
-
-## 6. Tech Stack
-
-| Layer | Technology | Purpose |
-|---|---|---|
-| **Frontend** | React 19, Vite 8 | Reactive UI state machine (`form` → `analyzing` → `results`) |
-| **Icons** | Lucide React | Accessible, crisp UI iconography |
-| **Styling** | Vanilla CSS Design Tokens | Lightweight, bespoke theme system with dark/light mode (no heavy UI frameworks) |
-| **Backend** | Node.js, Express 5 | REST API, validation, error handling, search orchestration |
-| **Search Intelligence** | SerpApi Official Node SDK (`serpapi`) | Google Web, Google Jobs, and Google News data retrieval |
-| **Database** | MongoDB & Mongoose 9 | Persistent scan storage with in-memory fallback cache |
-| **Testing** | Node.js Native Runner (`node:test`) | Unit and integration test suite (33 automated tests) |
-| **Linter** | Oxlint | High-speed static analysis and lint verification |
-
----
-
-## 7. Architecture
-
-```
-┌────────────────────────────────────────────────────────┐
-│                   CLIENT (React 19)                    │
-│   App.jsx (State Controller: form | analyzing | results)│
-│   ├── JobForm.jsx (Inputs + 1-Click Quick Demos)       │
-│   ├── AnalyzingScreen.jsx (5-Stage Visual Tracker)     │
-│   ├── ResultsView.jsx (Summary, Rules, Recommendations)│
-│   ├── EvidenceHub.jsx (Expandable SerpApi Drawers)     │
-│   └── RecentScans.jsx (MongoDB Scan History Grid)      │
-└───────────────────────────┬────────────────────────────┘
-                            │ Fetch API (/api/*)
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│               SERVER (Node.js / Express 5)             │
-│   routes/ (analyze, scans, search, health)             │
-│   controllers/ (analyzeController, scanController)     │
-│   middleware/ (errorHandler, notFoundHandler, CORS)    │
-│                                                        │
-│   services/analysis/                                   │
-│   ├── normalizer.js (Input sanitization)               │
-│   ├── serpApiIntelligenceService.js (3-Query Budget)   │
-│   └── ruleEngine.js (10 Deterministic Threat Rules)    │
-└───────────────┬────────────────────────┬───────────────┘
-                │                        │
-                ▼                        ▼
-┌───────────────────────────────┐ ┌──────────────────────┐
-│            SERPAPI            │ │  MONGODB / MONGOOSE  │
-│  - Google Web Search          │ │  - Collection: scans │
-│  - Google Jobs Search         │ │  - In-memory cache   │
-│  - Google News Search         │ │    fallback          │
-└───────────────────────────────┘ └──────────────────────┘
+[ User Input / 1-Click Preset ]
+              │
+              ▼  (HTTP POST /api/analyze)
+[ 1. Input Normalization ]
+      ├── Sanitizes strings, strips invalid characters
+      └── Extracts recruiter emails, phone numbers, Telegram/WhatsApp handles
+              │
+              ▼
+[ 2. SerpApi Search Intelligence (3-Query Budget) ]
+      ├── Google Web Search:   "{company}" official site OR careers
+      │                        └── Extracts official domain & Google Knowledge Graph
+      ├── Google Jobs Search:  "{title} {company}"
+      │                        └── Verifies active syndicated listings across job boards
+      └── Google News Search:  "{company}" (scam OR fraud OR fake OR fake offer OR arrest)
+                               └── Retrieves published fraud alerts and advisories
+              │
+              ▼
+[ 3. Deterministic Heuristic Engine ]
+      └── Evaluates 10 threat rules against input + SerpApi evidence
+              │
+              ▼
+[ 4. Evidence Aggregation & Risk Assessment ]
+      ├── Calculates risk severity (HIGH_RISK, ELEVATED_RISK, MODERATE_RISK, LOW_RISK)
+      ├── Compiles matched quotes & safety recommendations
+      └── Emits structured analysis payload
+              │
+              ▼  (HTTP POST /api/scans)
+[ 5. Persistence Layer ]
+      ├── MongoDB Atlas: Permanently stored in 'scans' collection
+      └── (Fallback): In-memory buffer if database is disconnected
+              │
+              ▼
+[ Results Presentation & Recent Scans History ]
 ```
 
 ---
 
-## 8. Setup Instructions
+## 5. Technology Stack
 
-### Prerequisites
-- Node.js 18+ installed
-- A valid [SerpApi API Key](https://serpapi.com/)
-- (Optional) Local MongoDB instance running on port 27017
+### Frontend (`client/`)
+| Component | Technology | Version | Purpose |
+|---|---|---|---|
+| Framework | React | 19.2.8 | Reactive component rendering and state orchestration |
+| Build Tool | Vite | 8.3.0 | Fast HMR dev server and production asset bundler |
+| Icons | Lucide React | 1.50.0 | Clean, accessible UI icons |
+| Styling | Vanilla CSS | Custom Tokens | Responsive layout, dark/light theme, micro-animations |
+| Code Quality | Oxlint | 1.81.0 | Fast static analysis and linting |
 
-### 1. Clone Repository
+### Backend (`server/`)
+| Component | Technology | Version | Purpose |
+|---|---|---|---|
+| Runtime | Node.js | >= 18.0.0 | JavaScript runtime engine |
+| Web Server | Express | 5.2.1 | REST API routing, JSON body parsing, error handling |
+| Search API | SerpApi SDK | 2.2.1 | Official Node.js SDK for Google search engines |
+| Database ODM | Mongoose | 9.11.0 | Object data modeling for MongoDB Atlas |
+| Environment | dotenv | 18.0.5 | Safe loading of server-side environment variables |
+| Cross-Origin | cors | 2.8.6 | CORS middleware for secure API proxying |
+| Test Runner | Node.js Test Runner | Native (`node:test`) | Unit, rule, integration, and API endpoint test suites |
+
+---
+
+## 6. Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        CLIENT (React 19)                        │
+│   App.jsx (View Controller: 'form' | 'analyzing' | 'results')    │
+│   ├── Header.jsx (Theme toggler, navigation)                    │
+│   ├── JobForm.jsx (Manual inputs + 1-click test presets)        │
+│   ├── AnalyzingScreen.jsx (5-Stage animated milestone tracker)  │
+│   ├── ResultsView.jsx (Executive badge, indicators, advice)     │
+│   ├── EvidenceHub.jsx (Google Web, Jobs, & News drawers)        │
+│   ├── VerificationSignalsSection.jsx (Confirmed vs Missing)     │
+│   └── RecentScans.jsx (Historical reports grid & detail modal)  │
+└────────────────────────────────┬────────────────────────────────┘
+                                 │ HTTP / JSON via Vite Proxy (/api/*)
+                                 ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    SERVER (Node.js / Express 5)                 │
+│   routes/                                                       │
+│   ├── healthRoutes.js   -> GET  /api/health                     │
+│   ├── analyzeRoutes.js  -> POST /api/analyze                    │
+│   ├── scanRoutes.js     -> POST, GET /api/scans, GET /:id       │
+│   └── searchRoutes.js   -> GET  /api/search/{web,jobs,news}     │
+│                                                                 │
+│   services/analysis/                                            │
+│   ├── normalizer.js                 (Input hygiene)             │
+│   ├── serpApiIntelligenceService.js (3-Query budget manager)    │
+│   └── ruleEngine.js                 (10 Deterministic rules)    │
+└───────────────────┬─────────────────────────────┬───────────────┘
+                    │                             │
+                    ▼                             ▼
+┌───────────────────────────────────┐ ┌───────────────────────────┐
+│              SERPAPI              │ │       PERSISTENCE         │
+│  - Google Web Search (Knowledge)  │ │  Primary: MongoDB Atlas   │
+│  - Google Jobs Search (Postings)  │ │           ('scans' coll)  │
+│  - Google News Search (Advisories)│ │  Fallback: In-Memory cache│
+└───────────────────────────────────┘ └───────────────────────────┘
+```
+
+---
+
+## 7. Prerequisites
+
+Before installing, ensure your environment meets the following requirements:
+- **Node.js:** `v18.0.0` or higher (tested on Node.js `v22.x`)
+- **npm:** `v9.0.0` or higher
+- **SerpApi API Key:** Required for live Google search queries ([Sign up at SerpApi](https://serpapi.com/))
+- **MongoDB Instance:** MongoDB Atlas cluster URI or a local MongoDB service (`mongodb://127.0.0.1:27017/scamshield`). *Note: ScamShield will still function using its in-memory fallback if MongoDB is not provided.*
+
+---
+
+## 8. Installation & Local Setup
+
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/suryach2006-lang/scamshield.git
 cd scamshield
 ```
 
-### 2. Configure Backend
+### 2. Configure & Start the Backend
+Open a terminal in the root directory:
 ```bash
 cd server
 npm install
@@ -187,109 +218,305 @@ npm install
 # Copy environment template
 cp .env.example .env
 ```
-Edit `server/.env` with your settings:
+Open `server/.env` and insert your credentials (never share or commit this file):
 ```env
 PORT=5000
 NODE_ENV=development
 SERPAPI_KEY=your_actual_serpapi_key_here
-MONGODB_URI=mongodb://127.0.0.1:27017/scamshield
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/scamshield?retryWrites=true&w=majority
 ```
 
-### 3. Run Backend Tests & Start Server
+Start the backend server:
 ```bash
-# Run backend test suite (33 tests)
-npm test
-
-# Start Express server on port 5000
 npm start
 ```
+*Expected log output:*
+```
+[INFO] [MongoDB] Connected successfully to mongodb+srv://... (scamshield)
+[INFO] ScamShield backend running in development mode on port 5000
+```
 
-### 4. Configure & Start Frontend
-In a separate terminal:
+### 3. Configure & Start the Frontend
+In a **second terminal**, start the client application:
 ```bash
 cd client
 npm install
 
-# Run frontend linter
-npm run lint
-
-# Start Vite dev server on port 5173
+# Start Vite development server
 npm run dev
 ```
-
-Open `http://localhost:5173` in your browser.
+Open your browser and navigate to **`http://localhost:5173`**.
 
 ---
 
-## 9. Environment Variables
+## 9. Environment Configuration
 
-All configuration is managed securely on the backend in `server/.env`:
+All configuration is managed securely on the server. The client contains **zero** API keys or secrets.
 
-| Variable | Required | Default | Description |
+| Variable | Required | Default Value | Description |
 |---|---|---|---|
-| `PORT` | No | `5000` | Express server port |
-| `NODE_ENV` | No | `development` | Runtime environment (`development` / `production`) |
-| `SERPAPI_KEY` | **Yes** | — | Private SerpApi secret key for Google search engines |
-| `MONGODB_URI` | No | `mongodb://127.0.0.1:27017/scamshield` | MongoDB connection URI |
+| `PORT` | No | `5000` | Port for the Express server to bind. |
+| `NODE_ENV` | No | `development` | Runtime environment (`development`, `production`, `test`). |
+| `SERPAPI_KEY` | **Yes** (for live search) | — | SerpApi secret key for Google Web, Google Jobs, and Google News. |
+| `MONGODB_URI` | Recommended | `mongodb://127.0.0.1:27017/scamshield` | MongoDB Atlas or local connection string. If omitted, in-memory store activates. |
 
-> **Security Note:** The frontend contains zero API keys or environment secrets. All communication proxies through `/api` to the Express backend.
+> **Security Note:** The root `.gitignore` explicitly prevents `.env`, `server/.env`, and any `.env.*` files from being committed to source control.
 
 ---
 
-## 10. API Endpoints
+## 10. Environment Example
 
-| Method | Endpoint | Description |
+A clean template file is provided at `server/.env.example`:
+
+```bash
+# Server Port (Default: 5000)
+PORT=5000
+
+# Node Runtime Environment
+NODE_ENV=development
+
+# SerpApi Secret Key (from https://serpapi.com/)
+SERPAPI_KEY=your_serpapi_api_key_here
+
+# MongoDB Connection String (Atlas or Local)
+MONGODB_URI=mongodb://127.0.0.1:27017/scamshield
+```
+
+---
+
+## 11. API Documentation
+
+### 1. Backend Health Check
+- **Endpoint:** `GET /api/health`
+- **Description:** Verifies service uptime and runtime environment.
+- **Response `200 OK`:**
+```json
+{
+  "status": "OK",
+  "message": "ScamShield backend service is running smoothly",
+  "timestamp": "2026-10-10T11:00:00.000Z",
+  "uptime": "142s",
+  "environment": "development"
+}
+```
+
+### 2. Analyze Job Listing
+- **Endpoint:** `POST /api/analyze`
+- **Query Parameter (Optional):** `?skipWebSearch=true` (skips SerpApi queries for rapid offline rule testing)
+- **Request Body:**
+```json
+{
+  "companyName": "Apex Data Solutions",
+  "jobTitle": "Data Entry Specialist",
+  "jobUrl": "https://example.com/apply",
+  "salary": "₹7,000 / day",
+  "location": "Remote",
+  "recruiterContact": "hr@gmail.com, Telegram: @apex_hire",
+  "jobDescription": "Direct joining without interview. Candidate must pay ₹1,500 registration fee for the software kit."
+}
+```
+- **Response `200 OK`:**
+```json
+{
+  "success": true,
+  "data": {
+    "input": { ... },
+    "summary": {
+      "assessment": "HIGH_RISK",
+      "headline": "Critical warning indicator detected (1 critical signal). High caution strongly advised.",
+      "indicatorCounts": {
+        "critical": 1,
+        "high": 2,
+        "medium": 1,
+        "low": 0,
+        "total": 4
+      },
+      "disclaimer": "ScamShield provides evidence-based risk indicators to assist candidate vigilance...",
+      "recommendations": [
+        "Cease communication immediately if asked for money, passwords, or remote device access.",
+        "Never pay any upfront registration, training, or kit fee to obtain employment."
+      ]
+    },
+    "riskIndicators": [
+      {
+        "id": "UPFRONT_REGISTRATION_FEE",
+        "type": "FINANCIAL_SOLICITATION",
+        "severity": "CRITICAL",
+        "title": "Mandatory Upfront Registration or Training Fee",
+        "explanation": "Demanding upfront payment before hiring is the single most common employment scam indicator.",
+        "evidence": { "matchedQuotes": ["pay ₹1,500 registration fee"] }
+      }
+    ],
+    "webEvidence": { ... },
+    "jobEvidence": { ... },
+    "newsEvidence": { ... },
+    "verificationSignals": { ... },
+    "metadata": {
+      "analyzedAt": "2026-10-10T11:01:00.000Z",
+      "executionDurationMs": 850,
+      "serpApiRequestsMade": 3,
+      "rulesEvaluatedCount": 10
+    }
+  }
+}
+```
+
+### 3. Save Scan Analysis
+- **Endpoint:** `POST /api/scans`
+- **Request Body:** `{ "input": { ... }, "results": { ... } }`
+- **Response `201 Created`:**
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "673248ab9c...",
+    "input": { ... },
+    "results": { ... },
+    "createdAt": "2026-10-10T11:01:05.000Z"
+  }
+}
+```
+
+### 4. Retrieve Recent Scans
+- **Endpoint:** `GET /api/scans?limit=20`
+- **Response `200 OK`:**
+```json
+{
+  "success": true,
+  "count": 3,
+  "data": [
+    {
+      "_id": "673248ab9c...",
+      "input": { "companyName": "Apex Data Solutions", "jobTitle": "Data Entry Specialist" },
+      "results": {
+        "summary": { "assessment": "HIGH_RISK", "headline": "Critical warning indicator detected..." }
+      },
+      "createdAt": "2026-10-10T11:01:05.000Z"
+    }
+  ]
+}
+```
+
+### 5. Retrieve Scan by ID
+- **Endpoint:** `GET /api/scans/:id`
+- **Response `200 OK`:** Returns full scan document including full evidence drawers and indicators.
+- **Response `404 Not Found`:** Returned when the scan ID does not exist.
+
+### 6. Search Proxies (Direct SerpApi)
+- `GET /api/search/web?q=...`
+- `GET /api/search/jobs?q=...&location=...`
+- `GET /api/search/news?q=...`
+
+---
+
+## 12. Database & Scan History Persistence
+
+ScamShield implements a resilient dual-tier persistence model:
+
+### MongoDB Atlas Persistence (Production / Recommended)
+When `MONGODB_URI` points to a reachable MongoDB Atlas cluster or local MongoDB instance:
+- Every completed scan is validated, sanitized against secret leakage, and written to the `scans` collection via Mongoose.
+- Scans are indexed by `createdAt: -1` for rapid chronological querying.
+- **Persistence Guarantee:** Saved scan records **persist indefinitely across server restarts**, network drops, or code redeployments. Existing database records are never wiped or overwritten.
+
+### In-Memory Fallback Cache
+If MongoDB is unreachable (e.g., restricted network, misconfigured credentials, or offline evaluation):
+- ScamShield logs a warning and automatically activates an in-memory storage array (`inMemoryScans` in `scanController.js`).
+- The user can still scan jobs, view reports, and review recent scans in the UI during that active session.
+- **Important Caveat:** In-memory fallback records reside solely in Node.js process RAM. **All in-memory records are lost when the backend server process stops or restarts.** To test persistent scan history across restarts, ensure a valid MongoDB connection is established.
+
+---
+
+## 13. Testing
+
+ScamShield includes automated tests running on Node.js's native test runner (`node:test`).
+
+### Run Backend Test Suite
+```bash
+cd server
+npm test
+```
+
+### Verified Test Results
+```
+ℹ tests 51
+ℹ suites 18
+ℹ pass 51
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms ~665ms
+```
+
+### Test Coverage Breakdown
+1. **`tests/analysisRules.test.js` (27 tests across 11 suites):**
+   - Validates input normalizer (camelCase/snake_case, phone/social handle extraction).
+   - Validates all 10 threat rules (fee detection, non-fee denial preservation, wallet top-ups, sensitive passwords, exorbitant daily income, Telegram/WhatsApp channels, domain mismatch, task scams, shorteners, generic employers).
+   - Validates dynamic custom rule registration and rule engine execution.
+2. **`tests/serpApiIntelligence.test.js` (15 tests across 3 suites):**
+   - Validates SerpApi query construction, title-only queries, ccTLD domain extraction (`.co.in`, `.co.uk`), and graceful skipping.
+   - Validates lookalike domain rejection (preventing false-positive verified domains for `infosys-careers-fraud.com` or `notinfosys.com`).
+   - Validates Google News intelligence (prevents flagging legitimate companies when news covers impersonation scams).
+3. **`tests/apiAnalyze.test.js` (3 tests):**
+   - Validates input validation errors, full scan analysis execution, and clean enterprise opening results.
+4. **`tests/apiScans.test.js` (6 tests):**
+   - Validates payload validation, document creation, `GET /api/scans` listing, `GET /api/scans/:id` retrieval, and `404` handling.
+
+### Run Frontend Linter
+```bash
+cd client
+npm run lint
+```
+*Result: 0 warnings and 0 errors across 15 files via Oxlint.*
+
+---
+
+## 14. Troubleshooting Guide
+
+| Issue | Root Cause | Solution |
 |---|---|---|
-| `GET` | `/api/health` | Service health telemetry and uptime |
-| `POST` | `/api/analyze` | Analyzes a job listing using SerpApi and the heuristic rule engine |
-| `POST` | `/api/scans` | Persists completed analysis results to MongoDB |
-| `GET` | `/api/scans` | Retrieves recent scan summaries (`?limit=20`) |
-| `GET` | `/api/scans/:id` | Retrieves full scan document and evidence by ID |
-| `GET` | `/api/search/web` | Direct Google Web search proxy via SerpApi |
-| `GET` | `/api/search/jobs` | Direct Google Jobs search proxy via SerpApi |
-| `GET` | `/api/search/news` | Direct Google News search proxy via SerpApi |
+| **MongoDB connection timeout / `MongooseServerSelectionError`** | MongoDB Atlas IP access list does not permit your current IP address. | Log in to MongoDB Atlas -> **Network Access** -> Click **Add IP Address** -> Select **Allow Access From Anywhere (`0.0.0.0/0`)** or add your current public IP. |
+| **`Authentication failed` on MongoDB Atlas** | Incorrect username or password in `MONGODB_URI`. Special characters in passwords must be URL-encoded. | Verify user in Atlas -> **Database Access**. Ensure password does not contain unencoded characters like `@`, `:`, or `/`. |
+| **Server falls back to in-memory store** | MongoDB is offline or `MONGODB_URI` is not loaded. | Check server console on startup. Look for `[MongoDB] Connected successfully` vs `[MongoDB] Running with in-memory storage fallback`. |
+| **Port 5000 already in use (`EADDRINUSE`)** | Another process is occupying port 5000. | Windows: Run `netstat -ano \| findstr :5000` and `taskkill /PID <PID> /F`, or set `PORT=5001` in `server/.env` (update proxy in `client/vite.config.js` if changed). |
+| **Port 5173 already in use** | Vite dev server already running. | Vite will automatically suggest using port 5174, or kill the background process. |
+| **SerpApi rate limit or invalid API key** | Missing or exhausted SerpApi quota. | Verify `SERPAPI_KEY` in `server/.env`. ScamShield handles missing or rate-limited keys gracefully by proceeding with rule-based heuristics and logging a clear warning. |
+| **Frontend cannot communicate with `/api`** | Backend server is not running on port 5000. | Ensure `npm start` is actively running in the `server` directory before launching the client. |
 
 ---
 
-## 11. Security Notes
+## 15. Limitations & Responsible Use
 
-- **Zero Credential Leakage:** SerpApi API credentials reside solely in server environment memory. They are never transmitted to the browser, logged to consoles, or persisted into database documents.
-- **Strict Payload Sanitization:** The `scanController` enforces whitelist-based field sanitization before persisting documents to prevent prototype pollution or arbitrary field injection.
-- **Connection URI Masking:** MongoDB connection strings automatically mask user credentials in application logs.
-- **Query Rate Limiting:** Targeted query construction caps SerpApi consumption at 3 requests per analysis, preventing denial-of-wallet issues.
-- **Defensive Parsing:** String and URL parsing routines include fallback guards to ensure malformed inputs or empty search responses do not cause unhandled runtime exceptions.
+- **Risk Indicators, Not Definite Proof:** ScamShield provides evidence-based risk indicators to assist candidate vigilance. An indicator highlights suspicious anomalies and does not constitute a legal determination of fraud.
+- **Search Engine Coverage:** If an employer is a brand-new startup, SerpApi may return limited Google Web and Jobs results. ScamShield surfaces this transparently as "Missing Verification Signals" rather than an automatic fraud accusation.
+- **Candidate Verification:** Job seekers should always independently verify offer letters by directly calling verified corporate head offices or contacting authorized human resources channels listed on official domain websites.
 
 ---
 
-## 12. Screenshots
+## 16. Hackathon Demo & Evaluation Checklist
 
-| Stage | Preview |
-|---|---|
-| **Job Inspection Form & Presets** | ![Inspection Form](docs/screenshots/form.png) *Input listing attributes or select 1-click test cases* |
-| **Dedicated Analyzing Screen** | ![Analyzing Screen](docs/screenshots/analyzing.png) *Live 5-stage progress indicator* |
-| **Executive Results Summary** | ![Results Summary](docs/screenshots/summary.png) *Risk level, indicator tallies, and safety guidance* |
-| **SerpApi Evidence Hub** | ![Evidence Hub](docs/screenshots/evidence.png) *Corroborated Google Web, Jobs, and News drawers* |
-| **Recent Scan History** | ![Scan History](docs/screenshots/history.png) *Reopen and review previous analyses instantly* |
+For judges and evaluators reviewing ScamShield, here is a quick step-by-step verification checklist:
 
----
-
-## 13. Future Improvements
-
-- **Standalone UPI VPA Validator:** Cross-reference recruiter payment handles against known Indian NPCI fraud registries.
-- **Domain WHOIS Registration Age Checker:** Corroborate newly registered domain ages (< 30 days old) often used in disposable recruitment campaigns.
-- **PDF Offer Letter Parser:** Upload and parse appointment letter PDFs to extract employer details, salary, and suspicious clauses automatically.
-- **Report Export & Sharing:** Download audit results as portable PDF investigation summaries or generate shareable report links.
-- **Community Threat Intelligence:** Allow verified job seekers to flag confirmed scam encounters to crowdsource fraud alerts.
+- [ ] **1. Clean Environment:** Node.js 18+ installed, dependencies installed in `server` and `client`.
+- [ ] **2. Health Check:** Navigate to `http://localhost:5000/api/health` -> verify status is `OK`.
+- [ ] **3. Automated Tests:** Run `npm test` in `server` -> verify all **51 tests pass**.
+- [ ] **4. Linter Check:** Run `npm run lint` in `client` -> verify **0 errors**.
+- [ ] **5. Launch UI:** Open `http://localhost:5173` -> dark/light theme switch operates smoothly.
+- [ ] **6. 1-Click Fee Scam Preset:** Click **"Fee Scam"** -> Click **"Inspect Job Listing"** -> Observe 5-stage progress tracker -> Results view displays **HIGH RISK** with matched registration fee quotes.
+- [ ] **7. 1-Click Impersonation Preset:** Click **"Spoof Scam"** -> Analyze -> Observe task scam indicators, `.xyz` domain warnings, and recruiter domain mismatch.
+- [ ] **8. 1-Click Legitimate Preset:** Click **"Legit Job"** -> Analyze -> Observe **LOW RISK** assessment with verified TCS corporate web presence.
+- [ ] **9. MongoDB Persistence Verification:**
+  - View **"Recent Scans"** in the UI to see saved reports.
+  - Restart the backend server (`Ctrl+C` in `server` terminal, then `npm start`).
+  - Refresh the UI -> Verify that previously saved scans remain visible and can be reopened.
+  - *(See [docs/DEPLOYMENT_AND_EVALUATION.md](docs/DEPLOYMENT_AND_EVALUATION.md) for full evaluator walkthrough).*
 
 ---
 
-## 14. Hackathon Track
+## 17. License & Credits
 
-- **Event:** SerpApi India Hackathon 2026
-- **Category:** Search Intelligence / Cybersecurity & Consumer Protection / Fraud Prevention
-- **Core Technology:** [SerpApi](https://serpapi.com/) Multi-Engine Search API (Google Web, Google Jobs, Google News)
-
----
-
-### Disclaimer
-*ScamShield provides evidence-based risk indicators to assist candidate vigilance and research. An indicator highlights potential risk factors or anomalies and does not constitute a legal determination of fraud. Always independently verify job offers and company credentials through official corporate communication channels.*
+- **License:** ISC License (see `server/package.json`)
+- **Hackathon:** Built for the **SerpApi India Hackathon 2026**
+- **Search Intelligence:** Powered by the official [SerpApi SDK](https://serpapi.com/)
+- **Author / Repository:** [suryach2006-lang/scamshield](https://github.com/suryach2006-lang/scamshield)
